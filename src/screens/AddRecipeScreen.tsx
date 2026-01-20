@@ -167,15 +167,24 @@ export default function AddRecipeScreen() {
               Paste the JSON recipe from ChatGPT below.
             </Text>
 
-            <TextInput
-              style={styles.jsonInput}
-              multiline
-              placeholder="Paste your recipe JSON here..."
-              value={jsonText}
-              onChangeText={setJsonText}
-              textAlignVertical="top"
-              c
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.jsonInput}
+                multiline
+                placeholder="Paste your recipe JSON here..."
+                value={jsonText}
+                onChangeText={setJsonText}
+                textAlignVertical="top"
+              />
+              {jsonText.trim() && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setJsonText('')}
+                >
+                  <Text style={styles.clearIcon}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <TouchableOpacity
               style={styles.uploadButton}
@@ -336,17 +345,37 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
+  inputWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   jsonInput: {
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+    paddingRight: 48,
     fontSize: 14,
     fontFamily: 'monospace',
     minHeight: 200,
     maxHeight: 300,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  clearButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#e0e0e0',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearIcon: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   uploadButton: {
     backgroundColor: '#4CAF50',
