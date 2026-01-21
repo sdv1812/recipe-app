@@ -10,7 +10,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { Recipe, PreparationStep, CookingStep, ShoppingItem } from '../types/recipe';
+import { Recipe } from '../types/recipe';
 import { storageUtils } from '../utils/storage';
 import { shareRecipe } from '../utils/recipeShare';
 
@@ -97,6 +97,17 @@ export default function RecipeDetailScreen() {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!recipe) return;
+    
+    try {
+      await storageUtils.toggleFavorite(recipe.id);
+      setRecipe({ ...recipe, isFavorite: !recipe.isFavorite });
+    } catch (error) {
+      Alert.alert('Error', 'Could not update favorite status');
+    }
+  };
+
   if (!recipe) {
     return (
       <View style={styles.container}>
@@ -114,12 +125,22 @@ export default function RecipeDetailScreen() {
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={handleShare}
-        >
-          <Text style={styles.shareButtonText}>Share 📤</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={handleToggleFavorite}
+          >
+            <Text style={styles.favoriteButtonText}>
+              {recipe.isFavorite ? '❤️' : '🤍'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={handleShare}
+          >
+            <Text style={styles.shareButtonText}>Share 📤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -304,6 +325,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4CAF50',
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  favoriteButton: {
+    padding: 8,
+  },
+  favoriteButtonText: {
+    fontSize: 24,
   },
   shareButton: {
     padding: 8,

@@ -87,4 +87,21 @@ export const storageUtils = {
       throw error;
     }
   },
+
+  /**
+   * Toggle favorite status of a recipe
+   */
+  async toggleFavorite(recipeId: string): Promise<void> {
+    try {
+      const recipes = await this.getAllRecipes();
+      const recipe = recipes.find((r) => r.id === recipeId);
+      if (recipe) {
+        recipe.isFavorite = !recipe.isFavorite;
+        await AsyncStorage.setItem(RECIPES_STORAGE_KEY, JSON.stringify(recipes));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      throw error;
+    }
+  },
 };

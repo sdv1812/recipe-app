@@ -41,6 +41,7 @@ export interface Recipe {
   shoppingList: ShoppingItem[];
   createdAt: string;
   imageUrl?: string;
+  isFavorite?: boolean;
 }
 
 export interface RecipeImport {

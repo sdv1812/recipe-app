@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +22,8 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadRecipes = async () => {
     try {
@@ -83,6 +86,38 @@ export default function HomeScreen() {
       ]
     );
   };
+
+  const filterRecipes = () => {
+    let filtered = recipes;
+
+    // Filter by favorites
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(r => r.isFavorite);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(recipe => {
+        // Search in title
+        if (recipe.title.toLowerCase().includes(query)) return true;
+        
+        // Search in ingredients
+        if (recipe.ingredients.some(ing => ing.name.toLowerCase().includes(query))) return true;
+        
+        // Search in tags
+        if (recipe.tags.some(tag => tag.toLowerCase().includes(query))) return true;
+        
+        // Search in categories
+        if (recipe.category.some(cat => cat.toLowerCase().includes(query))) return true;
+        
+        return false;
+      });
+    }
+
+    return filtered;
+  };
+
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
     const getTotalTime = () => {
       const times: string[] = [];
@@ -100,6 +135,9 @@ export default function HomeScreen() {
       >
         <View style={styles.recipeHeader}>
           <Text style={styles.recipeTitle}>{item.title}</Text>
+          {item.isFavorite && (
+            <Text style={styles.favoriteIndicator}>❤️</Text>
+          )}
         </View>
         {getTotalTime() && (
           <Text style={styles.recipeTime}>⏱️ {getTotalTime()}</Text>
@@ -141,22 +179,63 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddRecipe')}
-        >
-          <Text style={styles.addButtonText}>+ Add Recipe</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.filterButton, showFavoritesOnly && styles.filterButtonActive]}
+            onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          >
+            <Text style={styles.filterButtonText}>
+              {showFavoritesOnly ? '❤️' : '🤍'} Favorites
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddRecipe')}
+          >
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Search Bar */}
+      {recipes.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, ingredient, tag, or category..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearSearchIcon}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No recipes yet</Text>
           <Text style={styles.emptySubtext}>Tap "Add Recipe" to get started</Text>
         </View>
+      ) : filterRecipes().length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {searchQuery ? 'No recipes found' : 'No favorite recipes'}
+          </Text>
+          <Text style={styles.emptySubtext}>
+            {searchQuery 
+              ? 'Try a different search term' 
+              : 'Tap the ❤️ icon on a recipe to mark it as favorite'}
+          </Text>
+        </View>
       ) : (
         <FlatList
-          data={recipes}
+          data={filterRecipes()}
           renderItem={renderRecipeCard}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
@@ -197,6 +276,28 @@ const styles = StyleSheet.create({
     color: '#f44336',
     marginTop: 4,
   },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  filterButton: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  filterButtonActive: {
+    backgroundColor: '#FFE5E5',
+    borderColor: '#FF6B6B',
+  },
+  filterButtonText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
   addButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 16,
@@ -207,6 +308,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  searchContainer: {
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    padding: 0,
+  },
+  clearSearchIcon: {
+    fontSize: 18,
+    color: '#999',
+    padding: 4,
   },
   listContainer: {
     padding: 16,
@@ -224,11 +353,19 @@ const styles = StyleSheet.create({
   },
   recipeHeader: {
     marginBottom: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   recipeTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+  },
+  favoriteIndicator: {
+    fontSize: 16,
+    marginLeft: 8,
   },
   recipeTime: {
     fontSize: 12,
