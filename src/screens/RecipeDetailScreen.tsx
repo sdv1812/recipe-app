@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Recipe, PreparationStep, CookingStep, ShoppingItem } from '../types/recipe';
 import { storageUtils } from '../utils/storage';
+import { shareRecipe } from '../utils/recipeShare';
 
 type RecipeDetailRouteProp = RouteProp<RootStackParamList, 'RecipeDetail'>;
 type RecipeDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RecipeDetail'>;
@@ -86,6 +87,16 @@ export default function RecipeDetailScreen() {
     return times.join(' | ');
   };
 
+  const handleShare = async () => {
+    if (!recipe) return;
+    
+    try {
+      await shareRecipe(recipe);
+    } catch (error) {
+      Alert.alert('Share Failed', 'Could not share recipe. Please try again.');
+    }
+  };
+
   if (!recipe) {
     return (
       <View style={styles.container}>
@@ -102,6 +113,12 @@ export default function RecipeDetailScreen() {
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={handleShare}
+        >
+          <Text style={styles.shareButtonText}>Share 📤</Text>
         </TouchableOpacity>
       </View>
 
@@ -276,6 +293,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backButton: {
     padding: 8,
@@ -283,6 +303,15 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     color: '#4CAF50',
+    fontWeight: '600',
+  },
+  shareButton: {
+    padding: 8,
+    paddingHorizontal: 12,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    color: '#2196F3',
     fontWeight: '600',
   },
   content: {
