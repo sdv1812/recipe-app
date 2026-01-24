@@ -2,6 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { getRecipesCollection } from '../lib/db';
 import { updateRecipeWithChat } from '../lib/openai';
 import { ChatWithRecipeRequest, ChatWithRecipeResponse, Recipe, RecipeImport } from '../../shared/types';
+import { nanoid } from 'nanoid';
 
 export default async function handler(
   req: VercelRequest,
@@ -51,6 +52,32 @@ export default async function handler(
       }
     }
 
+    // Transform string arrays to proper step objects
+    const preparationSteps = Array.isArray(updatedRecipeData.preparationSteps)
+      ? updatedRecipeData.preparationSteps.map((step, index) => 
+          typeof step === 'string' 
+            ? { stepNumber: index + 1, instruction: step }
+            : step
+        )
+      : [];
+
+    const cookingSteps = Array.isArray(updatedRecipeData.cookingSteps)
+      ? updatedRecipeData.cookingSteps.map((step, index) => 
+          typeof step === 'string'
+            ? { stepNumber: index + 1, instruction: step }
+            : step
+        )
+      : [];
+
+    // Transform shopping list
+    const shoppingList = Array.isArray(updatedRecipeData.shoppingList)
+      ? updatedRecipeData.shoppingList.map((item) => 
+          typeof item === 'string'
+            ? { id: nanoid(), name: item, quantity: '', purchased: false }
+            : item
+        )
+      : [];
+
     // Update chat history
     const newChatHistory = [
       ...(recipe.aiChatHistory || []),
@@ -72,6 +99,9 @@ export default async function handler(
       {
         $set: {
           ...updatedRecipeData,
+          preparationSteps,
+          cookingSteps,
+          shoppingList,
           id: recipe.id,
           userId: recipe.userId,
           createdAt: recipe.createdAt,
