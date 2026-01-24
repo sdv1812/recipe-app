@@ -4,7 +4,7 @@ import { GenerateRecipeRequest, GenerateRecipeResponse, RecipeImport } from '../
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<GenerateRecipeResponse>
+  res: VercelResponse
 ) {
   // Only allow POST
   if (req.method !== 'POST') {

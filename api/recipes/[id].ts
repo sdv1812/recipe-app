@@ -11,7 +11,7 @@ interface RecipeResponse {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<RecipeResponse>
+  res: VercelResponse
 ) {
   const { id } = req.query;
 

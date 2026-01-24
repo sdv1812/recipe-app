@@ -10,7 +10,7 @@ interface ShareResponse {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<ShareResponse>
+  res: VercelResponse
 ) {
   if (req.method !== 'GET') {
     return res.status(405).json({ 

@@ -12,7 +12,7 @@ interface RecipesResponse {
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse<RecipesResponse>
+  res: VercelResponse
 ) {
   try {
     const recipes = await getRecipesCollection();
