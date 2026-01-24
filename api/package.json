@@ -1,0 +1,20 @@
+{
+  "name": "recipeapp-api",
+  "version": "1.0.0",
+  "description": "RecipeApp Backend API",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0",
+    "openai": "^4.26.0",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@vercel/node": "^3.0.21",
+    "typescript": "^5.3.3"
+  }
+}
