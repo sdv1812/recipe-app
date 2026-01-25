@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,77 +8,34 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as DocumentPicker from 'expo-document-picker';
-import * as Clipboard from 'expo-clipboard';
-import { RootStackParamList } from '../navigation/types';
-import { storageUtils } from '../utils/storage';
-import { parseRecipeJson, validateRecipeJson } from '../utils/recipeParser';
-import { RecipeImport } from '../types/recipe';
-import { CHATGPT_PROMPT } from '../constants/prompts';
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as Clipboard from "expo-clipboard";
+import { RootStackParamList } from "../navigation/types";
+import { storageUtils } from "../utils/storage";
+import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
+import { RecipeImport } from "../types/recipe";
+import { CHATGPT_PROMPT } from "../constants/prompts";
+import { api } from "../utils/api";
 
-type AddRecipeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddRecipe'>;
+type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "AddRecipe"
+>;
 
 export default function AddRecipeScreen() {
   const navigation = useNavigation<AddRecipeScreenNavigationProp>();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'file' | 'paste'>('paste');
-  const [jsonText, setJsonText] = useState('');
-
-  const handlePickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) {
-        return;
-      }
-
-      setLoading(true);
-
-      const file = result.assets[0];
-      
-      // Read file content
-      const response = await fetch(file.uri);
-      const jsonText = await response.text();
-      const jsonData = JSON.parse(jsonText) as RecipeImport;
-
-      // Validate JSON structure
-      const validation = validateRecipeJson(jsonData);
-      if (!validation.valid) {
-        Alert.alert('Invalid Recipe', validation.error || 'The recipe format is invalid');
-        setLoading(false);
-        return;
-      }
-
-      // Parse and save recipe
-      const recipe = parseRecipeJson(jsonData);
-      await storageUtils.saveRecipe(recipe);
-
-      Alert.alert('Success', 'Recipe imported successfully!', [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Home'),
-        },
-      ]);
-    } catch (error) {
-      console.error('Error importing recipe:', error);
-      Alert.alert(
-        'Import Failed',
-        'Could not import recipe. Please check the JSON format and try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [mode, setMode] = useState<"ai" | "paste">("ai");
+  const [jsonText, setJsonText] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const handlePasteJson = async () => {
     if (!jsonText.trim()) {
-      Alert.alert('Empty Input', 'Please paste your recipe JSON first');
+      Alert.alert("Empty Input", "Please paste your recipe JSON first");
       return;
     }
 
@@ -89,7 +46,10 @@ export default function AddRecipeScreen() {
       // Validate JSON structure
       const validation = validateRecipeJson(jsonData);
       if (!validation.valid) {
-        Alert.alert('Invalid Recipe', validation.error || 'The recipe format is invalid');
+        Alert.alert(
+          "Invalid Recipe",
+          validation.error || "The recipe format is invalid",
+        );
         setLoading(false);
         return;
       }
@@ -98,18 +58,18 @@ export default function AddRecipeScreen() {
       const recipe = parseRecipeJson(jsonData);
       await storageUtils.saveRecipe(recipe);
 
-      Alert.alert('Success', 'Recipe imported successfully!', [
+      Alert.alert("Success", "Recipe imported successfully!", [
         {
-          text: 'OK',
-          onPress: () => navigation.navigate('Home'),
+          text: "OK",
+          onPress: () => navigation.navigate("Home"),
         },
       ]);
-      setJsonText('');
+      setJsonText("");
     } catch (error) {
-      console.error('Error parsing JSON:', error);
+      console.error("Error parsing JSON:", error);
       Alert.alert(
-        'Invalid JSON',
-        'Could not parse JSON. Please check the format and try again.'
+        "Invalid JSON",
+        "Could not parse JSON. Please check the format and try again.",
       );
     } finally {
       setLoading(false);
@@ -118,7 +78,48 @@ export default function AddRecipeScreen() {
 
   const handleCopyPrompt = async () => {
     await Clipboard.setStringAsync(CHATGPT_PROMPT);
-    Alert.alert('Copied!', 'ChatGPT prompt copied to clipboard');
+    Alert.alert("Copied!", "ChatGPT prompt copied to clipboard");
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      Alert.alert(
+        "Empty Prompt",
+        "Please describe the recipe you want to generate",
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Call AI generation API
+      const generatedRecipe = await api.generateRecipe(aiPrompt.trim());
+
+      // Parse and save recipe
+      const recipe = parseRecipeJson(generatedRecipe);
+      await storageUtils.saveRecipe(recipe);
+
+      Alert.alert("Success", `"${recipe.title}" generated successfully!`, [
+        {
+          text: "OK",
+          onPress: () => {
+            setAiPrompt("");
+            navigation.navigate("Home");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Error generating recipe:", error);
+      Alert.alert(
+        "Generation Failed",
+        error instanceof Error
+          ? error.message
+          : "Failed to generate recipe. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -135,33 +136,101 @@ export default function AddRecipeScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Copy Prompt Button */}
-        <TouchableOpacity style={styles.copyPromptButton} onPress={handleCopyPrompt}>
-          <Text style={styles.copyPromptIcon}>📋</Text>
-          <Text style={styles.copyPromptText}>Copy ChatGPT Prompt</Text>
-        </TouchableOpacity>
-
         {/* Mode Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, mode === 'paste' && styles.activeTab]}
-            onPress={() => setMode('paste')}
+            style={[styles.tab, mode === "ai" && styles.activeTab]}
+            onPress={() => setMode("ai")}
           >
-            <Text style={[styles.tabText, mode === 'paste' && styles.activeTabText]}>
-              📝 Paste JSON
+            <Text
+              style={[styles.tabText, mode === "ai" && styles.activeTabText]}
+            >
+              🤖 Generate with AI
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, mode === 'file' && styles.activeTab]}
-            onPress={() => setMode('file')}
+            style={[styles.tab, mode === "paste" && styles.activeTab]}
+            onPress={() => setMode("paste")}
           >
-            <Text style={[styles.tabText, mode === 'file' && styles.activeTabText]}>
-              📄 Upload File
+            <Text
+              style={[styles.tabText, mode === "paste" && styles.activeTabText]}
+            >
+              📝 Paste JSON
             </Text>
           </TouchableOpacity>
         </View>
 
-        {mode === 'paste' ? (
+        {mode === "ai" ? (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modeContent}
+          >
+            <Text style={styles.instructionText}>
+              Describe the recipe you'd like to create, and AI will generate it
+              for you.
+            </Text>
+
+            <Text style={styles.exampleLabel}>Examples:</Text>
+            <View style={styles.examplesContainer}>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() =>
+                  setAiPrompt("healthy chicken salad with avocado")
+                }
+              >
+                <Text style={styles.exampleText}>🥗 Healthy chicken salad</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() => setAiPrompt("quick 15-minute pasta carbonara")}
+              >
+                <Text style={styles.exampleText}>🍝 Quick pasta carbonara</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() => setAiPrompt("vegan chocolate chip cookies")}
+              >
+                <Text style={styles.exampleText}>🍪 Vegan cookies</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.promptInput}
+                multiline
+                placeholder="E.g., spicy Thai basil chicken stir-fry with vegetables..."
+                value={aiPrompt}
+                onChangeText={setAiPrompt}
+                textAlignVertical="top"
+              />
+              {aiPrompt.trim() && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setAiPrompt("")}
+                >
+                  <Text style={styles.clearIcon}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleGenerateWithAI}
+              disabled={loading || !aiPrompt.trim()}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.uploadButtonText}>✨ Generate Recipe</Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.noteText}>
+              💡 Tip: Be specific! Include cuisine type, dietary restrictions,
+              cooking time, or specific ingredients.
+            </Text>
+          </KeyboardAvoidingView>
+        ) : (
           <View style={styles.modeContent}>
             <Text style={styles.instructionText}>
               Paste the JSON recipe from ChatGPT below.
@@ -179,7 +248,7 @@ export default function AddRecipeScreen() {
               {jsonText.trim() && (
                 <TouchableOpacity
                   style={styles.clearButton}
-                  onPress={() => setJsonText('')}
+                  onPress={() => setJsonText("")}
                 >
                   <Text style={styles.clearIcon}>✕</Text>
                 </TouchableOpacity>
@@ -200,35 +269,12 @@ export default function AddRecipeScreen() {
                 </>
               )}
             </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.modeContent}>
-            <Text style={styles.instructionText}>
-              Upload a JSON file generated by ChatGPT containing your recipe details.
-            </Text>
 
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handlePickDocument}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.uploadIcon}>📄</Text>
-                  <Text style={styles.uploadButtonText}>Choose JSON File</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.exampleContainer}>
-          <Text style={styles.exampleTitle}>Expected JSON Format:</Text>
-          <View style={styles.exampleBox}>
-            <Text style={styles.exampleCode}>
-              {`{
+            <View style={styles.exampleContainer}>
+              <Text style={styles.exampleTitle}>Expected JSON Format:</Text>
+              <View style={styles.exampleBox}>
+                <Text style={styles.exampleCode}>
+                  {`{
   "title": "Recipe Name",
   "description": "Optional description",
   "servings": 4,
@@ -253,9 +299,11 @@ export default function AddRecipeScreen() {
     "Bake for 20 minutes"
   ]
 }`}
-            </Text>
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -264,126 +312,126 @@ export default function AddRecipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     paddingTop: 60,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: '600',
+    color: "#4CAF50",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   copyPromptButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: "#2196F3",
     padding: 16,
     margin: 20,
     marginBottom: 10,
     borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   copyPromptIcon: {
     fontSize: 20,
     marginRight: 8,
   },
   copyPromptText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: 20,
     marginBottom: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 4,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   tabText: {
     fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
+    color: "#666",
+    fontWeight: "600",
   },
   activeTabText: {
-    color: '#fff',
+    color: "#fff",
   },
   modeContent: {
     paddingHorizontal: 20,
   },
   instructionText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 24,
     lineHeight: 22,
   },
   inputWrapper: {
-    position: 'relative',
+    position: "relative",
     marginBottom: 16,
   },
   jsonInput: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     paddingRight: 48,
     fontSize: 14,
-    fontFamily: 'monospace',
+    fontFamily: "monospace",
     minHeight: 200,
     maxHeight: 300,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   clearButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     width: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   clearIcon: {
-    color: '#666',
+    color: "#666",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   uploadButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 20,
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     marginBottom: 32,
   },
   uploadIcon: {
@@ -391,12 +439,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   uploadButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   exampleContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 20,
@@ -404,21 +452,63 @@ const styles = StyleSheet.create({
   },
   exampleTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 12,
   },
   exampleBox: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   exampleCode: {
-    fontFamily: 'monospace',
+    fontFamily: "monospace",
     fontSize: 12,
-    color: '#333',
+    color: "#333",
     lineHeight: 18,
+  },
+  promptInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    paddingRight: 48,
+    fontSize: 16,
+    minHeight: 120,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  exampleLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 12,
+  },
+  examplesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 20,
+    gap: 8,
+  },
+  exampleChip: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  exampleText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  noteText: {
+    fontSize: 13,
+    color: "#999",
+    fontStyle: "italic",
+    marginTop: 16,
+    lineHeight: 20,
   },
 });
