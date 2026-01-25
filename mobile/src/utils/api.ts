@@ -1,5 +1,12 @@
 import axios from "axios";
-import { RecipeImport, Recipe } from "../types/recipe";
+import {
+  RecipeImport,
+  Recipe,
+  ChatWithRecipeRequest,
+  ChatWithRecipeResponse,
+  GenerateRecipeRequest,
+  GenerateRecipeResponse,
+} from "../../../shared/types";
 import { authStorage } from "./storage";
 
 // Use your deployed backend URL or localhost for development
@@ -56,33 +63,6 @@ apiClient.interceptors.response.use(
   },
 );
 
-interface GenerateRecipeRequest {
-  prompt: string;
-}
-
-interface GenerateRecipeResponse {
-  success: boolean;
-  recipe?: RecipeImport;
-  error?: string;
-}
-
-interface ChatWithRecipeRequest {
-  recipeId: string;
-  message: string;
-  chatHistory?: Array<{
-    role: "user" | "assistant";
-    content: string;
-    timestamp: string;
-  }>;
-}
-
-interface ChatWithRecipeResponse {
-  success: boolean;
-  updatedRecipe?: Recipe;
-  assistantMessage?: string;
-  error?: string;
-}
-
 export const api = {
   /**
    * Generate a new recipe using AI
@@ -111,7 +91,7 @@ export const api = {
       content: string;
       timestamp: string;
     }> = [],
-  ): Promise<{ recipe: Recipe; message: string }> {
+  ): Promise<{ recipe: Recipe; message: string; preferenceAdded?: string }> {
     const { data } = await apiClient.post<ChatWithRecipeResponse>(
       "/chat/recipe",
       {
@@ -128,6 +108,7 @@ export const api = {
     return {
       recipe: data.updatedRecipe,
       message: data.assistantMessage,
+      preferenceAdded: data.preferenceAdded,
     };
   },
 
@@ -274,5 +255,46 @@ export const api = {
    */
   async logout(): Promise<void> {
     await authStorage.clearAuth();
+  },
+
+  /**
+   * Get user preferences
+   */
+  async getPreferences(): Promise<string[]> {
+    const { data } = await apiClient.get("/preferences");
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to get preferences");
+    }
+
+    return data.preferences || [];
+  },
+
+  /**
+   * Add a preference
+   */
+  async addPreference(preference: string): Promise<string[]> {
+    const { data } = await apiClient.post("/preferences", { preference });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to add preference");
+    }
+
+    return data.preferences || [];
+  },
+
+  /**
+   * Remove a preference
+   */
+  async removePreference(preference: string): Promise<string[]> {
+    const { data } = await apiClient.delete("/preferences", {
+      data: { preference },
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to remove preference");
+    }
+
+    return data.preferences || [];
   },
 };

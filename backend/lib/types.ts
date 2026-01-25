@@ -6,6 +6,7 @@ export interface UserDocument {
   email: string;
   password: string;
   name?: string;
+  preferences?: string[]; // User food preferences (e.g., "no spicy food", "vegetarian", "gluten-free")
   createdAt: string;
   updatedAt: string;
 }

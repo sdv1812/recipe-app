@@ -9,6 +9,8 @@ import AddRecipeScreen from "./src/screens/AddRecipeScreen";
 import RecipeDetailScreen from "./src/screens/RecipeDetailScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
+import PreferencesScreen from "./src/screens/PreferencesScreen";
+import SettingsDrawer from "./src/screens/SettingsDrawer";
 import { authStorage } from "./src/utils/storage";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,7 +46,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
           ),
         }}
       >
-        {(props) => <HomeScreen {...props} onLogout={onLogout} />}
+        {(props) => <HomeScreen {...props} />}
       </Tab.Screen>
       <Tab.Screen
         name="AIChef"
@@ -55,6 +57,24 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
             <Text style={{ fontSize: 24 }}>🤖</Text>
           ),
         }}
+      />
+      <Tab.Screen
+        name="More"
+        component={View}
+        options={{
+          tabBarLabel: "More",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ fontSize: 24 }}>☰</Text>
+          ),
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Prevent default navigation
+            e.preventDefault();
+            // Navigate to Settings modal instead
+            navigation.navigate("Settings");
+          },
+        })}
       />
     </Tab.Navigator>
   );
@@ -136,6 +156,32 @@ export default function App() {
                 animation: "slide_from_bottom",
               }}
             />
+            <Stack.Screen
+              name="Preferences"
+              component={PreferencesScreen}
+              options={{
+                presentation: "modal",
+                animation: "slide_from_bottom",
+                headerShown: true,
+                headerTitle: "My Preferences",
+              }}
+            />
+            <Stack.Screen
+              name="Settings"
+              options={{
+                presentation: "modal",
+                animation: "slide_from_bottom",
+                headerShown: false,
+              }}
+            >
+              {(props) => (
+                <SettingsDrawer
+                  {...props}
+                  onClose={() => props.navigation.goBack()}
+                  onLogout={handleLogout}
+                />
+              )}
+            </Stack.Screen>
           </>
         )}
       </Stack.Navigator>

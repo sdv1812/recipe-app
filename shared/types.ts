@@ -71,6 +71,7 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  preferences?: string[]; // User food preferences
   createdAt: string;
 }
 
@@ -118,6 +119,7 @@ export interface ChatWithRecipeResponse {
   success: boolean;
   updatedRecipe?: Recipe;
   assistantMessage?: string;
+  preferenceAdded?: string;
   error?: string;
 }
 

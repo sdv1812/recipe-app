@@ -23,17 +23,25 @@ export function getOpenAIClient(): OpenAI {
 export async function generateRecipe(
   prompt: string,
   systemPrompt?: string,
+  userPreferences?: string[],
 ): Promise<string> {
   const openai = getOpenAIClient();
+
+  let enhancedSystemPrompt =
+    systemPrompt ||
+    "You are a professional chef and recipe writer. Generate detailed, accurate recipes in JSON format.";
+
+  // Add user preferences to the system prompt
+  if (userPreferences && userPreferences.length > 0) {
+    enhancedSystemPrompt += `\n\nUSER PREFERENCES (must follow these):\n${userPreferences.map((p) => `- ${p}`).join("\n")}`;
+  }
 
   const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: [
       {
         role: "system",
-        content:
-          systemPrompt ||
-          "You are a professional chef and recipe writer. Generate detailed, accurate recipes in JSON format.",
+        content: enhancedSystemPrompt,
       },
       {
         role: "user",
@@ -51,20 +59,23 @@ export async function updateRecipeWithChat(
   recipe: Recipe,
   userMessage: string,
   chatHistory: ChatMessage[] = [],
+  userPreferences?: string[],
 ): Promise<string> {
   const openai = getOpenAIClient();
 
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    {
-      role: "system",
-      content: `You are a professional chef helping users refine recipes. 
+  let systemContent = `You are a professional chef helping users refine recipes. 
 
 CRITICAL: You MUST return ONLY valid JSON with no extra text, markdown, or explanations.
 
 Current recipe:
-${JSON.stringify(recipe, null, 2)}
+${JSON.stringify(recipe, null, 2)}`;
 
-When the user requests changes, return the COMPLETE updated recipe in this EXACT JSON format:
+  // Add user preferences
+  if (userPreferences && userPreferences.length > 0) {
+    systemContent += `\n\nUSER PREFERENCES (always respect these):\n${userPreferences.map((p) => `- ${p}`).join("\n")}`;
+  }
+
+  systemContent += `\n\nWhen the user requests changes, return the COMPLETE updated recipe in this EXACT JSON format:
 {
   "title": "Recipe Name",
   "description": "Brief description",
@@ -86,7 +97,12 @@ RULES:
 - Include ALL fields even if unchanged
 - Ensure all JSON is properly formatted with no trailing commas
 - Do not wrap in markdown code blocks
-- Do not add any explanatory text before or after the JSON`,
+- Do not add any explanatory text before or after the JSON`;
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: systemContent,
     },
     ...chatHistory.map((msg) => ({
       role: msg.role as "user" | "assistant",

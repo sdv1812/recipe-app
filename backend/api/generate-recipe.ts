@@ -1,5 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { ObjectId } from "mongodb";
 import { generateRecipe } from "../lib/openai";
+import { getUsersCollection } from "../lib/db";
 import {
   GenerateRecipeRequest,
   GenerateRecipeResponse,
@@ -67,7 +69,16 @@ IMPORTANT:
 - Provide detailed, clear instructions
 - Use appropriate categories and tags`;
 
-    const aiResponse = await generateRecipe(prompt, systemPrompt);
+    // Get user preferences
+    const users = await getUsersCollection();
+    const user = await users.findOne({ _id: new ObjectId(userId) });
+    const userPreferences = user?.preferences || [];
+
+    const aiResponse = await generateRecipe(
+      prompt,
+      systemPrompt,
+      userPreferences,
+    );
 
     // Parse the JSON response
     let recipe: RecipeImport;

@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { getRecipesCollection } from "../../lib/db";
+import { ObjectId } from "mongodb";
+import { getRecipesCollection, getUsersCollection } from "../../lib/db";
 import { updateRecipeWithChat } from "../../lib/openai";
+import { detectPreference } from "../../lib/preferenceDetection";
 import {
   ChatWithRecipeRequest,
   ChatWithRecipeResponse,
@@ -48,8 +50,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Get AI response with recipe updates
-    const aiResponse = await updateRecipeWithChat(recipe, message, chatHistory);
+    // Get user preferences
+    const users = await getUsersCollection();
+    const user = await users.findOne({ _id: new ObjectId(userId) });
+    const userPreferences = user?.preferences || [];
+
+    // Detect if user is stating a new preference
+    const detectedPreference = await detectPreference(message);
+    let preferenceAdded = false;
+
+    if (detectedPreference && !userPreferences.includes(detectedPreference)) {
+      // Save the new preference
+      await users.updateOne(
+        { _id: new ObjectId(userId) },
+        {
+          $addToSet: { preferences: detectedPreference },
+          $set: { updatedAt: new Date().toISOString() },
+        },
+      );
+      userPreferences.push(detectedPreference);
+      preferenceAdded = true;
+    }
+
+    // Get AI response with recipe updates (including user preferences)
+    const aiResponse = await updateRecipeWithChat(
+      recipe,
+      message,
+      chatHistory,
+      userPreferences,
+    );
 
     // Parse updated recipe with better error handling
     let updatedRecipeData: RecipeImport;
@@ -129,6 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         $set: {
           ...updatedRecipeData,
           preparationSteps,
+          preferenceAdded: preferenceAdded ? detectedPreference : undefined,
           cookingSteps,
           shoppingList,
           id: recipe.id,

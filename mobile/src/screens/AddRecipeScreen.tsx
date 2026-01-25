@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Clipboard from "expo-clipboard";
 import { RootStackParamList } from "../navigation/types";
 import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
-import { RecipeImport } from "../types/recipe";
+import { RecipeImport } from "../../../shared/types";
 import { CHATGPT_PROMPT } from "../constants/prompts";
 import { api } from "../utils/api";
 

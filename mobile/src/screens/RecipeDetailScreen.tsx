@@ -15,7 +15,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe, ChatMessage } from "../types/recipe";
+import { Recipe, ChatMessage } from "../../../shared/types";
 import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 
@@ -196,10 +196,28 @@ export default function RecipeDetailScreen() {
       // Update recipe with new data
       setRecipe(response.recipe);
 
-      Alert.alert(
-        "Recipe Updated",
-        "Your recipe has been updated based on your request!",
-      );
+      // Check if a new preference was detected and show notification
+      if (response.preferenceAdded) {
+        Alert.alert(
+          "✨ Preference Saved",
+          `I noticed you prefer "${response.preferenceAdded}". I've saved this to your preferences so all future recipes will follow this!`,
+          [
+            {
+              text: "View Preferences",
+              onPress: () => {
+                setShowChatModal(false);
+                navigation.navigate("Preferences");
+              },
+            },
+            { text: "OK" },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Recipe Updated",
+          "Your recipe has been updated based on your request!",
+        );
+      }
     } catch (error) {
       Alert.alert(
         "Chat Error",

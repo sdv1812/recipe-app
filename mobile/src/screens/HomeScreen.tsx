@@ -13,7 +13,7 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe } from "../types/recipe";
+import { Recipe } from "../../../shared/types";
 import { api } from "../utils/api";
 import { formatTime } from "../utils/timeFormatter";
 
@@ -22,11 +22,7 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
   "MainTabs"
 >;
 
-type HomeScreenProps = {
-  onLogout?: () => void;
-};
-
-export default function HomeScreen({ onLogout }: HomeScreenProps) {
+export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -222,19 +218,6 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
           )}
         </View>
         <View style={styles.headerRight}>
-          {onLogout && (
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={() => {
-                Alert.alert("Logout", "Are you sure you want to logout?", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Logout", style: "destructive", onPress: onLogout },
-                ]);
-              }}
-            >
-              <Text style={styles.logoutButtonText}>Logout</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={[
               styles.filterButton,
@@ -389,6 +372,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
+  },
+  preferencesButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#007AFF",
+    marginRight: 8,
   },
   searchContainer: {
     backgroundColor: "#fff",
