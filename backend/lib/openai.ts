@@ -58,24 +58,35 @@ export async function updateRecipeWithChat(
     {
       role: "system",
       content: `You are a professional chef helping users refine recipes. 
-Current recipe: ${JSON.stringify(recipe, null, 2)}
 
-When the user requests changes, return the COMPLETE updated recipe in JSON format matching this structure:
+CRITICAL: You MUST return ONLY valid JSON with no extra text, markdown, or explanations.
+
+Current recipe:
+${JSON.stringify(recipe, null, 2)}
+
+When the user requests changes, return the COMPLETE updated recipe in this EXACT JSON format:
 {
   "title": "Recipe Name",
-  "description": "Description",
+  "description": "Brief description",
   "servings": 4,
   "prepTimeMinutes": 15,
   "marinateTimeMinutes": 0,
   "cookTimeMinutes": 30,
-  "category": ["main-course", "italian"],
-  "tags": ["quick", "vegetarian"],
-  "ingredients": [{"name": "Flour", "quantity": "2", "unit": "cups"}],
-  "preparationSteps": ["Step 1", "Step 2"],
-  "cookingSteps": ["Step 1", "Step 2"]
+  "category": ["main-course"],
+  "tags": ["quick"],
+  "ingredients": [
+    {"name": "Ingredient name", "quantity": "2", "unit": "cups"}
+  ],
+  "preparationSteps": ["Step 1 text", "Step 2 text"],
+  "cookingSteps": ["Step 1 text", "Step 2 text"]
 }
 
-Only return valid JSON, no additional text.`,
+RULES:
+- Return ONLY the JSON object, nothing else
+- Include ALL fields even if unchanged
+- Ensure all JSON is properly formatted with no trailing commas
+- Do not wrap in markdown code blocks
+- Do not add any explanatory text before or after the JSON`,
     },
     ...chatHistory.map((msg) => ({
       role: msg.role as "user" | "assistant",
@@ -90,8 +101,9 @@ Only return valid JSON, no additional text.`,
   const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages,
-    temperature: 0.7,
+    temperature: 0.5, // Lower temperature for more consistent JSON
     max_tokens: 2000,
+    response_format: { type: "json_object" }, // Force JSON response
   });
 
   return completion.choices[0].message.content || "";

@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe } from "../types/recipe";
+import { Recipe, ChatMessage } from "../types/recipe";
 import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 
@@ -31,10 +35,21 @@ export default function RecipeDetailScreen() {
   const [activeTab, setActiveTab] = useState<
     "ingredients" | "prep" | "cooking" | "shopping"
   >("ingredients");
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [isChatting, setIsChatting] = useState(false);
 
   useEffect(() => {
     loadRecipe();
   }, [recipeId]);
+
+  useEffect(() => {
+    // Load chat history from recipe
+    if (recipe?.aiChatHistory) {
+      setChatHistory(recipe.aiChatHistory);
+    }
+  }, [recipe]);
 
   const loadRecipe = async () => {
     try {
@@ -146,6 +161,59 @@ export default function RecipeDetailScreen() {
     }
   };
 
+  const handleSendChatMessage = async () => {
+    if (!chatMessage.trim() || !recipe || isChatting) return;
+
+    const userMessage = chatMessage.trim();
+    setChatMessage("");
+    setIsChatting(true);
+
+    try {
+      // Add user message to chat history immediately
+      const newUserMessage: ChatMessage = {
+        role: "user",
+        content: userMessage,
+        timestamp: new Date().toISOString(),
+      };
+      const updatedHistory = [...chatHistory, newUserMessage];
+      setChatHistory(updatedHistory);
+
+      // Call API to update recipe
+      const response = await api.chatWithRecipe(
+        recipe.id,
+        userMessage,
+        chatHistory,
+      );
+
+      // Add AI response to chat history
+      const aiMessage: ChatMessage = {
+        role: "assistant",
+        content: response.message,
+        timestamp: new Date().toISOString(),
+      };
+      setChatHistory([...updatedHistory, aiMessage]);
+
+      // Update recipe with new data
+      setRecipe(response.recipe);
+
+      Alert.alert(
+        "Recipe Updated",
+        "Your recipe has been updated based on your request!",
+      );
+    } catch (error) {
+      Alert.alert(
+        "Chat Error",
+        error instanceof Error
+          ? error.message
+          : "Failed to process your request",
+      );
+      // Remove the user message if failed
+      setChatHistory(chatHistory);
+    } finally {
+      setIsChatting(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -173,6 +241,12 @@ export default function RecipeDetailScreen() {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.chatButton}
+            onPress={() => setShowChatModal(true)}
+          >
+            <Text style={styles.chatButtonText}>🤖 AI</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.favoriteButton}
             onPress={handleToggleFavorite}
@@ -394,6 +468,90 @@ export default function RecipeDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* AI Chat Modal */}
+      <Modal
+        visible={showChatModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowChatModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.chatContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.chatHeader}>
+            <TouchableOpacity onPress={() => setShowChatModal(false)}>
+              <Text style={styles.chatCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.chatTitle}>Chat with AI</Text>
+            <View style={{ width: 30 }} />
+          </View>
+
+          <ScrollView style={styles.chatMessages}>
+            <View style={styles.chatWelcome}>
+              <Text style={styles.chatWelcomeText}>🤖</Text>
+              <Text style={styles.chatWelcomeMessage}>
+                Ask me to modify your recipe! For example:{"\n\n"}• "Make it
+                less spicy"{"\n"}• "Add more vegetables"{"\n"}• "Make it vegan"
+                {"\n"}• "Reduce cooking time"
+              </Text>
+            </View>
+
+            {chatHistory.map((msg, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.chatBubble,
+                  msg.role === "user"
+                    ? styles.userBubble
+                    : styles.assistantBubble,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chatBubbleText,
+                    msg.role === "user" && styles.userBubbleText,
+                  ]}
+                >
+                  {msg.content}
+                </Text>
+              </View>
+            ))}
+
+            {isChatting && (
+              <View style={styles.typingIndicator}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.typingText}>AI is thinking...</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.chatInputContainer}>
+            <TextInput
+              style={styles.chatInput}
+              placeholder="Ask AI to modify your recipe..."
+              value={chatMessage}
+              onChangeText={setChatMessage}
+              multiline
+              maxLength={500}
+              editable={!isChatting}
+            />
+            <TouchableOpacity
+              style={[
+                styles.chatSendButton,
+                (!chatMessage.trim() || isChatting) &&
+                  styles.chatSendButtonDisabled,
+              ]}
+              onPress={handleSendChatMessage}
+              disabled={!chatMessage.trim() || isChatting}
+            >
+              <Text style={styles.chatSendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -605,5 +763,133 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     flex: 1,
+  },
+  chatButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  chatButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  chatContainer: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  chatHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    paddingTop: 60,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  chatTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  chatCloseButton: {
+    fontSize: 28,
+    color: "#666",
+    width: 30,
+  },
+  chatMessages: {
+    flex: 1,
+    padding: 16,
+  },
+  chatWelcome: {
+    backgroundColor: "#E3F2FD",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  chatWelcomeText: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  chatWelcomeMessage: {
+    fontSize: 14,
+    color: "#1565C0",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  chatBubble: {
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 12,
+    maxWidth: "80%",
+  },
+  userBubble: {
+    backgroundColor: "#007AFF",
+    alignSelf: "flex-end",
+  },
+  assistantBubble: {
+    backgroundColor: "#fff",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  chatBubbleText: {
+    fontSize: 15,
+    color: "#333",
+    lineHeight: 20,
+  },
+  userBubbleText: {
+    color: "#fff",
+  },
+  typingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    alignSelf: "flex-start",
+    maxWidth: "80%",
+  },
+  typingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: "#666",
+  },
+  chatInputContainer: {
+    flexDirection: "row",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    paddingBottom: 32,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    maxHeight: 100,
+    marginRight: 8,
+  },
+  chatSendButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    justifyContent: "center",
+  },
+  chatSendButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  chatSendButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
   },
 });

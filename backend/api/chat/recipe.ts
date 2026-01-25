@@ -51,18 +51,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get AI response with recipe updates
     const aiResponse = await updateRecipeWithChat(recipe, message, chatHistory);
 
-    // Parse updated recipe
+    // Parse updated recipe with better error handling
     let updatedRecipeData: RecipeImport;
     try {
-      updatedRecipeData = JSON.parse(aiResponse);
-    } catch (parseError) {
-      // Try to extract JSON
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      // First, try to clean the response
+      let cleanedResponse = aiResponse.trim();
+
+      // Try to extract JSON if wrapped in text
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        updatedRecipeData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse updated recipe JSON");
+        cleanedResponse = jsonMatch[0];
       }
+
+      // Parse the JSON
+      updatedRecipeData = JSON.parse(cleanedResponse);
+
+      // Validate required fields
+      if (!updatedRecipeData.title || !updatedRecipeData.ingredients) {
+        throw new Error("Invalid recipe structure - missing required fields");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", aiResponse);
+      console.error("Parse error:", parseError);
+
+      return res.status(500).json({
+        success: false,
+        error:
+          "AI returned invalid recipe format. Please try rephrasing your request.",
+      });
     }
 
     // Transform string arrays to proper step objects
