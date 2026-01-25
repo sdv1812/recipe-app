@@ -15,7 +15,6 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Clipboard from "expo-clipboard";
 import { RootStackParamList } from "../navigation/types";
-import { storageUtils } from "../utils/storage";
 import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
 import { RecipeImport } from "../types/recipe";
 import { CHATGPT_PROMPT } from "../constants/prompts";
@@ -56,7 +55,7 @@ export default function AddRecipeScreen() {
 
       // Parse and save recipe
       const recipe = parseRecipeJson(jsonData);
-      await storageUtils.saveRecipe(recipe);
+      await api.createRecipe(jsonData);
 
       Alert.alert("Success", "Recipe imported successfully!", [
         {
@@ -96,9 +95,11 @@ export default function AddRecipeScreen() {
       // Call AI generation API
       const generatedRecipe = await api.generateRecipe(aiPrompt.trim());
 
-      // Parse and save recipe
+      // Parse for display
       const recipe = parseRecipeJson(generatedRecipe);
-      await storageUtils.saveRecipe(recipe);
+
+      // Save the generated recipe to the database
+      await api.createRecipe(generatedRecipe);
 
       Alert.alert("Success", `"${recipe.title}" generated successfully!`, [
         {

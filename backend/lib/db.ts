@@ -1,5 +1,6 @@
 import { MongoClient, Db, Collection } from "mongodb";
 import { Recipe, User, ShareToken } from "../../shared/types";
+import { UserDocument } from "./types";
 
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
@@ -41,9 +42,9 @@ export async function getRecipesCollection(): Promise<Collection<Recipe>> {
   return db.collection<Recipe>("recipes");
 }
 
-export async function getUsersCollection(): Promise<Collection<User>> {
+export async function getUsersCollection(): Promise<Collection<UserDocument>> {
   const { db } = await connectToDatabase();
-  return db.collection<User>("users");
+  return db.collection<UserDocument>("users");
 }
 
 export async function getSharesCollection(): Promise<Collection<ShareToken>> {

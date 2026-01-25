@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-} from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
-import { Recipe } from '../types/recipe';
-import { storageUtils } from '../utils/storage';
-import { shareRecipe } from '../utils/recipeShare';
+  ActivityIndicator,
+} from "react-native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
+import { Recipe } from "../types/recipe";
+import { api } from "../utils/api";
+import { shareRecipe } from "../utils/recipeShare";
 
-type RecipeDetailRouteProp = RouteProp<RootStackParamList, 'RecipeDetail'>;
-type RecipeDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'RecipeDetail'>;
+type RecipeDetailRouteProp = RouteProp<RootStackParamList, "RecipeDetail">;
+type RecipeDetailNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "RecipeDetail"
+>;
 
 export default function RecipeDetailScreen() {
   const navigation = useNavigation<RecipeDetailNavigationProp>();
@@ -23,95 +27,138 @@ export default function RecipeDetailScreen() {
   const { recipeId } = route.params;
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [activeTab, setActiveTab] = useState<'ingredients' | 'prep' | 'cooking' | 'shopping'>('ingredients');
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<
+    "ingredients" | "prep" | "cooking" | "shopping"
+  >("ingredients");
 
   useEffect(() => {
     loadRecipe();
   }, [recipeId]);
 
   const loadRecipe = async () => {
-    const loadedRecipe = await storageUtils.getRecipeById(recipeId);
-    if (loadedRecipe) {
+    try {
+      const loadedRecipe = await api.getRecipeById(recipeId);
       setRecipe(loadedRecipe);
-    } else {
-      Alert.alert('Error', 'Recipe not found', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Recipe not found",
+        [{ text: "OK", onPress: () => navigation.goBack() }],
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleStepCompletion = async (type: 'prep' | 'cooking', stepNumber: number) => {
+  const toggleStepCompletion = async (
+    type: "prep" | "cooking",
+    stepNumber: number,
+  ) => {
     if (!recipe) return;
 
     const updatedRecipe = { ...recipe };
-    
-    if (type === 'prep') {
-      const step = updatedRecipe.preparationSteps.find(s => s.stepNumber === stepNumber);
+
+    if (type === "prep") {
+      const step = updatedRecipe.preparationSteps.find(
+        (s) => s.stepNumber === stepNumber,
+      );
       if (step) step.completed = !step.completed;
     } else {
-      const step = updatedRecipe.cookingSteps.find(s => s.stepNumber === stepNumber);
+      const step = updatedRecipe.cookingSteps.find(
+        (s) => s.stepNumber === stepNumber,
+      );
       if (step) step.completed = !step.completed;
     }
 
-    await storageUtils.updateRecipe(updatedRecipe);
-    setRecipe(updatedRecipe);
+    try {
+      await api.updateRecipe(recipe.id, updatedRecipe);
+      setRecipe(updatedRecipe);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to update recipe",
+      );
+    }
   };
 
   const toggleShoppingItem = async (itemId: string) => {
     if (!recipe) return;
 
     const updatedRecipe = { ...recipe };
-    const item = updatedRecipe.shoppingList.find(i => i.id === itemId);
+    const item = updatedRecipe.shoppingList.find((i) => i.id === itemId);
     if (item) {
       item.purchased = !item.purchased;
     }
 
-    await storageUtils.updateRecipe(updatedRecipe);
-    setRecipe(updatedRecipe);
+    try {
+      await api.updateRecipe(recipe.id, updatedRecipe);
+      setRecipe(updatedRecipe);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to update recipe",
+      );
+    }
   };
 
   const formatTimeBreakdown = () => {
-    if (!recipe) return '';
+    if (!recipe) return "";
     const times: string[] = [];
     if (recipe.prepTimeMinutes) times.push(`Prep: ${recipe.prepTimeMinutes}m`);
     if (recipe.marinateTimeMinutes) {
       const hours = Math.floor(recipe.marinateTimeMinutes / 60);
       const mins = recipe.marinateTimeMinutes % 60;
       if (hours > 0) {
-        times.push(`Marinate: ${hours}h${mins > 0 ? ` ${mins}m` : ''}`);
+        times.push(`Marinate: ${hours}h${mins > 0 ? ` ${mins}m` : ""}`);
       } else {
         times.push(`Marinate: ${mins}m`);
       }
     }
     if (recipe.cookTimeMinutes) times.push(`Cook: ${recipe.cookTimeMinutes}m`);
-    return times.join(' | ');
+    return times.join(" | ");
   };
 
   const handleShare = async () => {
     if (!recipe) return;
-    
+
     try {
       await shareRecipe(recipe);
     } catch (error) {
-      Alert.alert('Share Failed', 'Could not share recipe. Please try again.');
+      Alert.alert("Share Failed", "Could not share recipe. Please try again.");
     }
   };
 
   const handleToggleFavorite = async () => {
     if (!recipe) return;
-    
+
     try {
-      await storageUtils.toggleFavorite(recipe.id);
-      setRecipe({ ...recipe, isFavorite: !recipe.isFavorite });
+      const updatedRecipe = { ...recipe, isFavorite: !recipe.isFavorite };
+      await api.updateRecipe(recipe.id, updatedRecipe);
+      setRecipe(updatedRecipe);
     } catch (error) {
-      Alert.alert('Error', 'Could not update favorite status');
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Could not update favorite status",
+      );
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading recipe...</Text>
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text>Recipe not found</Text>
       </View>
     );
   }
@@ -131,13 +178,10 @@ export default function RecipeDetailScreen() {
             onPress={handleToggleFavorite}
           >
             <Text style={styles.favoriteButtonText}>
-              {recipe.isFavorite ? '❤️' : '🤍'}
+              {recipe.isFavorite ? "❤️" : "🤍"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={handleShare}
-          >
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
             <Text style={styles.shareButtonText}>Share 📤</Text>
           </TouchableOpacity>
         </View>
@@ -151,10 +195,14 @@ export default function RecipeDetailScreen() {
           )}
           <View style={styles.metadata}>
             {recipe.servings && (
-              <Text style={styles.metadataItem}>🍽️ {recipe.servings} servings</Text>
+              <Text style={styles.metadataItem}>
+                🍽️ {recipe.servings} servings
+              </Text>
             )}
             {formatTimeBreakdown() && (
-              <Text style={styles.metadataItem}>⏱️ {formatTimeBreakdown()}</Text>
+              <Text style={styles.metadataItem}>
+                ⏱️ {formatTimeBreakdown()}
+              </Text>
             )}
           </View>
           {recipe.category.length > 0 && (
@@ -185,67 +233,98 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.tabs}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'ingredients' && styles.activeTab]}
-            onPress={() => setActiveTab('ingredients')}
+            style={[
+              styles.tab,
+              activeTab === "ingredients" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("ingredients")}
           >
-            <Text style={[styles.tabText, activeTab === 'ingredients' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "ingredients" && styles.activeTabText,
+              ]}
+            >
               Ingredients
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'prep' && styles.activeTab]}
-            onPress={() => setActiveTab('prep')}
+            style={[styles.tab, activeTab === "prep" && styles.activeTab]}
+            onPress={() => setActiveTab("prep")}
           >
-            <Text style={[styles.tabText, activeTab === 'prep' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "prep" && styles.activeTabText,
+              ]}
+            >
               Prep
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'cooking' && styles.activeTab]}
-            onPress={() => setActiveTab('cooking')}
+            style={[styles.tab, activeTab === "cooking" && styles.activeTab]}
+            onPress={() => setActiveTab("cooking")}
           >
-            <Text style={[styles.tabText, activeTab === 'cooking' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "cooking" && styles.activeTabText,
+              ]}
+            >
               Cooking
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'shopping' && styles.activeTab]}
-            onPress={() => setActiveTab('shopping')}
+            style={[styles.tab, activeTab === "shopping" && styles.activeTab]}
+            onPress={() => setActiveTab("shopping")}
           >
-            <Text style={[styles.tabText, activeTab === 'shopping' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "shopping" && styles.activeTabText,
+              ]}
+            >
               Shopping
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.tabContent}>
-          {activeTab === 'ingredients' && (
+          {activeTab === "ingredients" && (
             <View>
               {recipe.ingredients.map((ingredient, index) => (
                 <View key={index} style={styles.ingredientItem}>
                   <Text style={styles.ingredientBullet}>•</Text>
                   <Text style={styles.ingredientText}>
-                    {ingredient.quantity} {ingredient.unit || ''} {ingredient.name}
+                    {ingredient.quantity} {ingredient.unit || ""}{" "}
+                    {ingredient.name}
                   </Text>
                 </View>
               ))}
             </View>
           )}
 
-          {activeTab === 'prep' && (
+          {activeTab === "prep" && (
             <View>
               {recipe.preparationSteps.map((step) => (
                 <TouchableOpacity
                   key={step.stepNumber}
                   style={styles.stepItem}
-                  onPress={() => toggleStepCompletion('prep', step.stepNumber)}
+                  onPress={() => toggleStepCompletion("prep", step.stepNumber)}
                 >
                   <Text style={styles.stepCheckbox}>
-                    {step.completed ? '✅' : '⬜'}
+                    {step.completed ? "✅" : "⬜"}
                   </Text>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepNumber}>Step {step.stepNumber}</Text>
-                    <Text style={[styles.stepText, step.completed && styles.completedText]}>
+                    <Text style={styles.stepNumber}>
+                      Step {step.stepNumber}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.stepText,
+                        step.completed && styles.completedText,
+                      ]}
+                    >
                       {step.instruction}
                     </Text>
                   </View>
@@ -254,24 +333,35 @@ export default function RecipeDetailScreen() {
             </View>
           )}
 
-          {activeTab === 'cooking' && (
+          {activeTab === "cooking" && (
             <View>
               {recipe.cookingSteps.map((step) => (
                 <TouchableOpacity
                   key={step.stepNumber}
                   style={styles.stepItem}
-                  onPress={() => toggleStepCompletion('cooking', step.stepNumber)}
+                  onPress={() =>
+                    toggleStepCompletion("cooking", step.stepNumber)
+                  }
                 >
                   <Text style={styles.stepCheckbox}>
-                    {step.completed ? '✅' : '⬜'}
+                    {step.completed ? "✅" : "⬜"}
                   </Text>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepNumber}>Step {step.stepNumber}</Text>
-                    <Text style={[styles.stepText, step.completed && styles.completedText]}>
+                    <Text style={styles.stepNumber}>
+                      Step {step.stepNumber}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.stepText,
+                        step.completed && styles.completedText,
+                      ]}
+                    >
                       {step.instruction}
                     </Text>
                     {step.duration && (
-                      <Text style={styles.stepDuration}>⏱️ {step.duration}</Text>
+                      <Text style={styles.stepDuration}>
+                        ⏱️ {step.duration}
+                      </Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -279,7 +369,7 @@ export default function RecipeDetailScreen() {
             </View>
           )}
 
-          {activeTab === 'shopping' && (
+          {activeTab === "shopping" && (
             <View>
               {recipe.shoppingList.map((item) => (
                 <TouchableOpacity
@@ -288,10 +378,15 @@ export default function RecipeDetailScreen() {
                   onPress={() => toggleShoppingItem(item.id)}
                 >
                   <Text style={styles.stepCheckbox}>
-                    {item.purchased ? '✅' : '⬜'}
+                    {item.purchased ? "✅" : "⬜"}
                   </Text>
-                  <Text style={[styles.shoppingText, item.purchased && styles.completedText]}>
-                    {item.quantity} {item.unit || ''} {item.name}
+                  <Text
+                    style={[
+                      styles.shoppingText,
+                      item.purchased && styles.completedText,
+                    ]}
+                  >
+                    {item.quantity} {item.unit || ""} {item.name}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -306,29 +401,40 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderBottomColor: "#e0e0e0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: '600',
+    color: "#4CAF50",
+    fontWeight: "600",
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   favoriteButton: {
@@ -343,123 +449,123 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: 16,
-    color: '#2196F3',
-    fontWeight: '600',
+    color: "#2196F3",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   titleSection: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 12,
     lineHeight: 22,
   },
   metadata: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     marginBottom: 16,
   },
   metadataItem: {
     fontSize: 14,
-    color: '#999',
+    color: "#999",
   },
   chipsContainer: {
     marginBottom: 12,
   },
   chipsLabel: {
     fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
+    color: "#999",
+    fontWeight: "600",
     marginBottom: 6,
   },
   chipsWrapper: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   categoryChip: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: "#E8F5E9",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   categoryChipText: {
     fontSize: 12,
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: "#2E7D32",
+    fontWeight: "600",
   },
   tagChip: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   tagChipText: {
     fontSize: 12,
-    color: '#1565C0',
-    fontWeight: '500',
+    color: "#1565C0",
+    fontWeight: "500",
   },
   tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   tab: {
     flex: 1,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: "#4CAF50",
   },
   tabText: {
     fontSize: 14,
-    color: '#999',
-    fontWeight: '600',
+    color: "#999",
+    fontWeight: "600",
   },
   activeTabText: {
-    color: '#4CAF50',
+    color: "#4CAF50",
   },
   tabContent: {
     padding: 20,
   },
   ingredientItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 8,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   ingredientBullet: {
     fontSize: 20,
     marginRight: 12,
-    color: '#4CAF50',
+    color: "#4CAF50",
   },
   ingredientText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     flex: 1,
   },
   stepItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'flex-start',
+    borderBottomColor: "#f0f0f0",
+    alignItems: "flex-start",
   },
   stepCheckbox: {
     fontSize: 24,
@@ -470,34 +576,34 @@ const styles = StyleSheet.create({
   },
   stepNumber: {
     fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
+    color: "#999",
+    fontWeight: "600",
     marginBottom: 4,
   },
   stepText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     lineHeight: 22,
   },
   stepDuration: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   completedText: {
-    textDecorationLine: 'line-through',
-    color: '#999',
+    textDecorationLine: "line-through",
+    color: "#999",
   },
   shoppingItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'center',
+    borderBottomColor: "#f0f0f0",
+    alignItems: "center",
   },
   shoppingText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     flex: 1,
   },
 });

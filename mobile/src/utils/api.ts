@@ -145,6 +145,59 @@ export const api = {
   },
 
   /**
+   * Get all recipes for the current user
+   */
+  async getAllRecipes(): Promise<Recipe[]> {
+    const { data } = await apiClient.get("/recipes");
+
+    if (!data.success || !data.recipes) {
+      throw new Error(data.error || "Failed to get recipes");
+    }
+
+    return data.recipes;
+  },
+
+  /**
+   * Get a single recipe by ID
+   */
+  async getRecipeById(recipeId: string): Promise<Recipe> {
+    const { data } = await apiClient.get(`/recipes/${recipeId}`);
+
+    if (!data.success || !data.recipe) {
+      throw new Error(data.error || "Failed to get recipe");
+    }
+
+    return data.recipe;
+  },
+
+  /**
+   * Update a recipe
+   */
+  async updateRecipe(
+    recipeId: string,
+    updates: Partial<Recipe>,
+  ): Promise<Recipe> {
+    const { data } = await apiClient.put(`/recipes/${recipeId}`, updates);
+
+    if (!data.success || !data.recipe) {
+      throw new Error(data.error || "Failed to update recipe");
+    }
+
+    return data.recipe;
+  },
+
+  /**
+   * Delete a recipe
+   */
+  async deleteRecipe(recipeId: string): Promise<void> {
+    const { data } = await apiClient.delete(`/recipes/${recipeId}`);
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to delete recipe");
+    }
+  },
+
+  /**
    * Create a shareable link
    */
   async createShareLink(recipeId: string): Promise<string> {

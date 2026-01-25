@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
 import { getUsersCollection } from "../../lib/db";
 import { generateToken } from "../../lib/jwt";
+import { UserDocument } from "../../lib/types";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Validate API key
@@ -31,7 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const users = await getUsersCollection();
 
     // Find user
-    const user = await users.findOne({ email: email.toLowerCase() });
+    const user = await users.findOne<UserDocument>({
+      email: email.toLowerCase(),
+    });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -45,6 +48,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
+      });
+    }
+
+    if (!user._id) {
+      return res.status(500).json({
+        success: false,
+        error: "User ID not found",
       });
     }
 

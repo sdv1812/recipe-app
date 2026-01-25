@@ -8,12 +8,13 @@ import {
   RefreshControl,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { Recipe } from "../types/recipe";
-import { storageUtils } from "../utils/storage";
+import { api } from "../utils/api";
 import { formatTime } from "../utils/timeFormatter";
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
@@ -29,20 +30,27 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const loadRecipes = async () => {
     try {
-      const loadedRecipes = await storageUtils.getAllRecipes();
+      const loadedRecipes = await api.getAllRecipes();
       setRecipes(loadedRecipes);
     } catch (error) {
-      Alert.alert("Error", "Failed to load recipes");
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to load recipes",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   useFocusEffect(
     useCallback(() => {
+      setLoading(true);
       loadRecipes();
     }, []),
   );
@@ -64,10 +72,15 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
           style: "destructive",
           onPress: async () => {
             try {
-              await storageUtils.deleteRecipe(recipeId);
+              await api.deleteRecipe(recipeId);
               await loadRecipes();
             } catch (error) {
-              Alert.alert("Error", "Failed to delete recipe");
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete recipe",
+              );
             }
           },
         },
@@ -78,7 +91,7 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
   const handleClearAllRecipes = () => {
     Alert.alert(
       "Clear All Recipes",
-      "This will delete ALL recipes. This cannot be undone!",
+      "This will delete ALL your recipes. This cannot be undone!",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -86,11 +99,19 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
           style: "destructive",
           onPress: async () => {
             try {
-              await storageUtils.clearAllRecipes();
+              // Delete all recipes via API
+              await Promise.all(
+                recipes.map((recipe) => api.deleteRecipe(recipe.id)),
+              );
               await loadRecipes();
               Alert.alert("Success", "All recipes cleared");
             } catch (error) {
-              Alert.alert("Error", "Failed to clear recipes");
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "Failed to clear recipes",
+              );
             }
           },
         },
@@ -254,11 +275,16 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
         </View>
       )}
 
-      {recipes.length === 0 ? (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading recipes...</Text>
+        </View>
+      ) : recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No recipes yet</Text>
           <Text style={styles.emptySubtext}>
-            Tap "Add Recipe" to get started
+            Tap "+ Add" to create your first recipe
           </Text>
         </View>
       ) : filterRecipes().length === 0 ? (
@@ -458,6 +484,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
   },
   emptyText: {
     fontSize: 24,

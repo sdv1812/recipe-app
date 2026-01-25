@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
 import { getUsersCollection } from "../../lib/db";
 import { generateToken } from "../../lib/jwt";
+import { UserDocument } from "../../lib/types";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Validate API key
@@ -63,8 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       email: email.toLowerCase(),
       password: hashedPassword,
       name: name || email.split("@")[0],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     const userId = result.insertedId.toString();
