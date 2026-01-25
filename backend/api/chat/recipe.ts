@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRecipesCollection } from '../lib/db';
-import { updateRecipeWithChat } from '../lib/openai';
-import { ChatWithRecipeRequest, ChatWithRecipeResponse, Recipe, RecipeImport } from '../../shared/types';
+import { getRecipesCollection } from '../../lib/db';
+import { updateRecipeWithChat } from '../../lib/openai';
+import { ChatWithRecipeRequest, ChatWithRecipeResponse, Recipe, RecipeImport } from '../../../shared/types';
 import { nanoid } from 'nanoid';
 
 export default async function handler(

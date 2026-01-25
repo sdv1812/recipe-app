@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSharesCollection, getRecipesCollection } from '../lib/db';
-import { Recipe } from '../../shared/types';
+import { getSharesCollection, getRecipesCollection } from '../../lib/db';
+import { Recipe } from '../../../shared/types';
 
 interface ShareResponse {
   success: boolean;

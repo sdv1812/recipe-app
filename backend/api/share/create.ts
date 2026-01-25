@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSharesCollection, getRecipesCollection } from '../lib/db';
+import { getSharesCollection, getRecipesCollection } from '../../lib/db';
 import { nanoid } from 'nanoid';
-import { CreateShareLinkRequest, CreateShareLinkResponse, ShareToken } from '../../shared/types';
+import { CreateShareLinkRequest, CreateShareLinkResponse, ShareToken } from '../../../shared/types';
 
 export default async function handler(
   req: VercelRequest,

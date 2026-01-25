@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRecipesCollection } from '../lib/db';
+import { getRecipesCollection } from '../../lib/db';
 import { nanoid } from 'nanoid';
-import { Recipe, PreparationStep, CookingStep, ShoppingItem } from '../../shared/types';
+import { Recipe, PreparationStep, CookingStep, ShoppingItem } from '../../../shared/types';
 
 interface RecipesResponse {
   success: boolean;

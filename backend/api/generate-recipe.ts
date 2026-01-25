@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateRecipe } from './lib/openai';
-import { GenerateRecipeRequest, GenerateRecipeResponse, RecipeImport } from '../shared/types';
+import { generateRecipe } from '../lib/openai';
+import { GenerateRecipeRequest, GenerateRecipeResponse, RecipeImport } from '../../shared/types';
 
 export default async function handler(
   req: VercelRequest,
