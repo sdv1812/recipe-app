@@ -22,13 +22,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!userId) {
     return unauthorizedResponse(res, "Authentication required");
   }
-  console.log("Authenticated userId:", userId);
+
   try {
     const recipes = await getRecipesCollection();
 
     // GET - List user's recipes
     if (req.method === "GET") {
-      console.log("Fetching recipes for userId:", userId);
       // Only return recipes owned by the authenticated user
       const recipeList = await recipes
         .find({ userId })
@@ -43,12 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST - Create new recipe
     if (req.method === "POST") {
-      console.log("Creating new recipe for userId:", userId);
       const recipeData = req.body;
-
-      console.log("=== POST /api/recipes ===");
-      console.log("Received recipe data:", JSON.stringify(recipeData, null, 2));
-      console.log("Authenticated userId:", userId);
 
       // Transform string arrays to proper step objects
       const preparationSteps: PreparationStep[] = Array.isArray(
@@ -97,41 +91,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         aiChatHistory: [],
       };
 
-      console.log("About to insert recipe:", {
-        id: recipeId,
-        userId,
-        title: newRecipe.title,
-        ingredientsCount: newRecipe.ingredients?.length,
-        prepStepsCount: preparationSteps.length,
-        cookStepsCount: cookingSteps.length,
+      const result = await recipes.insertOne(newRecipe as any);
+
+      return res.status(201).json({
+        success: true,
+        recipe: newRecipe,
       });
-
-      try {
-        const result = await recipes.insertOne(newRecipe as any);
-
-        console.log("Insert result:", {
-          acknowledged: result.acknowledged,
-          insertedId: result.insertedId?.toString(),
-        });
-
-        // Verify the recipe was actually inserted
-        const insertedRecipe = await recipes.findOne({ id: recipeId });
-        console.log("Verification - Recipe found in DB:", !!insertedRecipe);
-
-        if (!insertedRecipe) {
-          console.error(
-            "ERROR: Recipe was not found in database after insertion!",
-          );
-        }
-
-        return res.status(201).json({
-          success: true,
-          recipe: newRecipe,
-        });
-      } catch (insertError) {
-        console.error("Error during insertOne:", insertError);
-        throw insertError;
-      }
     }
 
     return res.status(405).json({
