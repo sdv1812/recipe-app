@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection } from "mongodb";
-import { Recipe, User, ShareToken } from "../../../shared/types";
+import { Recipe, User, ShareToken } from "../../shared/types";
 
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
