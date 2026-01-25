@@ -1,6 +1,8 @@
-import { Recipe } from '../types/recipe';
+import { Recipe } from "../types/recipe";
 
 export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
   Home: undefined;
   AddRecipe: undefined;
   RecipeDetail: { recipeId: string };

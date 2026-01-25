@@ -1,5 +1,6 @@
 import axios from "axios";
 import { RecipeImport, Recipe } from "../types/recipe";
+import { authStorage } from "./storage";
 
 // Use your deployed backend URL or localhost for development
 const API_BASE_URL = __DEV__
@@ -18,10 +19,18 @@ const apiClient = axios.create({
   timeout: 30000, // 30 seconds timeout
 });
 
-// Request interceptor to add API key to every request
+// Request interceptor to add API key and auth token to every request
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Add API key
     config.headers["x-api-key"] = API_KEY;
+
+    // Add auth token if available
+    const token = await authStorage.getToken();
+    if (token) {
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => {
@@ -146,5 +155,71 @@ export const api = {
     }
 
     return data.shareUrl;
+  },
+
+  /**
+   * Register a new user
+   */
+  async register(
+    email: string,
+    password: string,
+    name?: string,
+  ): Promise<{
+    user: { id: string; email: string; name: string };
+    token: string;
+  }> {
+    const { data } = await apiClient.post("/auth/register", {
+      email,
+      password,
+      name,
+    });
+
+    if (!data.success || !data.user || !data.token) {
+      throw new Error(data.error || "Failed to register");
+    }
+
+    return { user: data.user, token: data.token };
+  },
+
+  /**
+   * Login user
+   */
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{
+    user: { id: string; email: string; name: string };
+    token: string;
+  }> {
+    const { data } = await apiClient.post("/auth/login", {
+      email,
+      password,
+    });
+
+    if (!data.success || !data.user || !data.token) {
+      throw new Error(data.error || "Failed to login");
+    }
+
+    return { user: data.user, token: data.token };
+  },
+
+  /**
+   * Get current user info
+   */
+  async getCurrentUser(): Promise<{ id: string; email: string; name: string }> {
+    const { data } = await apiClient.get("/auth/me");
+
+    if (!data.success || !data.user) {
+      throw new Error(data.error || "Failed to get user info");
+    }
+
+    return data.user;
+  },
+
+  /**
+   * Logout user (clear local auth data)
+   */
+  async logout(): Promise<void> {
+    await authStorage.clearAuth();
   },
 };

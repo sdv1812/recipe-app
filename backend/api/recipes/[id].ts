@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { getRecipesCollection } from "../../lib/db";
 import { Recipe } from "../../../shared/types";
-import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
+import { requireAuth, unauthorizedResponse } from "../../lib/auth";
 
 interface RecipeResponse {
   success: boolean;
@@ -11,9 +11,10 @@ interface RecipeResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Validate API key
-  if (!validateApiKey(req)) {
-    return unauthorizedResponse(res);
+  // Require authentication
+  const userId = requireAuth(req);
+  if (!userId) {
+    return unauthorizedResponse(res, "Authentication required");
   }
 
   const { id } = req.query;
@@ -30,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET - Get single recipe
     if (req.method === "GET") {
-      const recipe = await recipes.findOne({ id });
+      const recipe = await recipes.findOne({ id, userId });
 
       if (!recipe) {
         return res.status(404).json({
@@ -49,10 +50,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === "PUT") {
       const updates = req.body;
 
-      // TODO: Verify userId matches recipe owner when auth is implemented
-
+      // Verify user owns this recipe
       const result = await recipes.updateOne(
-        { id },
+        { id, userId },
         {
           $set: {
             ...updates,
@@ -64,11 +64,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (result.matchedCount === 0) {
         return res.status(404).json({
           success: false,
-          error: "Recipe not found",
+          error: "Recipe not found or unauthorized",
         });
       }
 
-      const updatedRecipe = await recipes.findOne({ id });
+      const updatedRecipe = await recipes.findOne({ id, userId });
 
       return res.status(200).json({
         success: true,
@@ -78,14 +78,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // DELETE - Delete recipe
     if (req.method === "DELETE") {
-      // TODO: Verify userId matches recipe owner when auth is implemented
-
-      const result = await recipes.deleteOne({ id });
+      // Verify user owns this recipe
+      const result = await recipes.deleteOne({ id, userId });
 
       if (result.deletedCount === 0) {
         return res.status(404).json({
           success: false,
-          error: "Recipe not found",
+          error: "Recipe not found or unauthorized",
         });
       }
 

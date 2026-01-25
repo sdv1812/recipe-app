@@ -7,7 +7,7 @@ import {
   CookingStep,
   ShoppingItem,
 } from "../../../shared/types";
-import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
+import { requireAuth, unauthorizedResponse } from "../../lib/auth";
 
 interface RecipesResponse {
   success: boolean;
@@ -17,25 +17,20 @@ interface RecipesResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Validate API key
-  if (!validateApiKey(req)) {
-    return unauthorizedResponse(res);
+  // Require authentication (validates both API key and JWT token)
+  const userId = requireAuth(req);
+  if (!userId) {
+    return unauthorizedResponse(res, "Authentication required");
   }
 
   try {
     const recipes = await getRecipesCollection();
 
-    // GET - List all recipes (with optional filters)
+    // GET - List user's recipes
     if (req.method === "GET") {
-      const { userId, isPublished } = req.query;
-
-      const filter: any = {};
-      if (userId) filter.userId = userId;
-      if (isPublished !== undefined)
-        filter.isPublished = isPublished === "true";
-
+      // Only return recipes owned by the authenticated user
       const recipeList = await recipes
-        .find(filter)
+        .find({ userId })
         .sort({ createdAt: -1 })
         .toArray();
 
@@ -48,9 +43,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // POST - Create new recipe
     if (req.method === "POST") {
       const recipeData = req.body;
-
-      // TODO: Get userId from auth token when implemented
-      const userId = (req.headers["x-user-id"] as string) || "anonymous";
 
       // Transform string arrays to proper step objects
       const preparationSteps: PreparationStep[] = Array.isArray(
@@ -86,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const newRecipe: Recipe = {
         ...recipeData,
         id: nanoid(),
-        userId,
+        userId, // Use authenticated userId
         preparationSteps,
         cookingSteps,
         shoppingList,

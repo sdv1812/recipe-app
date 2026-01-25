@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,36 +8,43 @@ import {
   RefreshControl,
   Alert,
   TextInput,
-} from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
-import { Recipe } from '../types/recipe';
-import { storageUtils } from '../utils/storage';
-import { formatTime } from '../utils/timeFormatter';
+} from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
+import { Recipe } from "../types/recipe";
+import { storageUtils } from "../utils/storage";
+import { formatTime } from "../utils/timeFormatter";
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Home"
+>;
 
-export default function HomeScreen() {
+type HomeScreenProps = {
+  onLogout?: () => void;
+};
+
+export default function HomeScreen({ onLogout }: HomeScreenProps) {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadRecipes = async () => {
     try {
       const loadedRecipes = await storageUtils.getAllRecipes();
       setRecipes(loadedRecipes);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load recipes');
+      Alert.alert("Error", "Failed to load recipes");
     }
   };
 
   useFocusEffect(
     useCallback(() => {
       loadRecipes();
-    }, [])
+    }, []),
   );
 
   const onRefresh = async () => {
@@ -47,43 +54,47 @@ export default function HomeScreen() {
   };
 
   const handleDeleteRecipe = (recipeId: string) => {
-    Alert.alert('Delete Recipe', 'Are you sure you want to delete this recipe?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await storageUtils.deleteRecipe(recipeId);
-            await loadRecipes();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to delete recipe');
-          }
+    Alert.alert(
+      "Delete Recipe",
+      "Are you sure you want to delete this recipe?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await storageUtils.deleteRecipe(recipeId);
+              await loadRecipes();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete recipe");
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleClearAllRecipes = () => {
     Alert.alert(
-      'Clear All Recipes',
-      'This will delete ALL recipes. This cannot be undone!',
+      "Clear All Recipes",
+      "This will delete ALL recipes. This cannot be undone!",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete All',
-          style: 'destructive',
+          text: "Delete All",
+          style: "destructive",
           onPress: async () => {
             try {
               await storageUtils.clearAllRecipes();
               await loadRecipes();
-              Alert.alert('Success', 'All recipes cleared');
+              Alert.alert("Success", "All recipes cleared");
             } catch (error) {
-              Alert.alert('Error', 'Failed to clear recipes');
+              Alert.alert("Error", "Failed to clear recipes");
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -92,25 +103,32 @@ export default function HomeScreen() {
 
     // Filter by favorites
     if (showFavoritesOnly) {
-      filtered = filtered.filter(r => r.isFavorite);
+      filtered = filtered.filter((r) => r.isFavorite);
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(recipe => {
+      filtered = filtered.filter((recipe) => {
         // Search in title
         if (recipe.title.toLowerCase().includes(query)) return true;
-        
+
         // Search in ingredients
-        if (recipe.ingredients.some(ing => ing.name.toLowerCase().includes(query))) return true;
-        
+        if (
+          recipe.ingredients.some((ing) =>
+            ing.name.toLowerCase().includes(query),
+          )
+        )
+          return true;
+
         // Search in tags
-        if (recipe.tags.some(tag => tag.toLowerCase().includes(query))) return true;
-        
+        if (recipe.tags.some((tag) => tag.toLowerCase().includes(query)))
+          return true;
+
         // Search in categories
-        if (recipe.category.some(cat => cat.toLowerCase().includes(query))) return true;
-        
+        if (recipe.category.some((cat) => cat.toLowerCase().includes(query)))
+          return true;
+
         return false;
       });
     }
@@ -121,23 +139,26 @@ export default function HomeScreen() {
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
     const getTotalTime = () => {
       const times: string[] = [];
-      if (item.prepTimeMinutes) times.push(`Prep: ${formatTime(item.prepTimeMinutes)}`);
-      if (item.marinateTimeMinutes) times.push(`Marinate: ${formatTime(item.marinateTimeMinutes)}`);
-      if (item.cookTimeMinutes) times.push(`Cook: ${formatTime(item.cookTimeMinutes)}`);
-      return times.join(' | ');
+      if (item.prepTimeMinutes)
+        times.push(`Prep: ${formatTime(item.prepTimeMinutes)}`);
+      if (item.marinateTimeMinutes)
+        times.push(`Marinate: ${formatTime(item.marinateTimeMinutes)}`);
+      if (item.cookTimeMinutes)
+        times.push(`Cook: ${formatTime(item.cookTimeMinutes)}`);
+      return times.join(" | ");
     };
 
     return (
       <TouchableOpacity
         style={styles.recipeCard}
-        onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+        onPress={() =>
+          navigation.navigate("RecipeDetail", { recipeId: item.id })
+        }
         onLongPress={() => handleDeleteRecipe(item.id)}
       >
         <View style={styles.recipeHeader}>
           <Text style={styles.recipeTitle}>{item.title}</Text>
-          {item.isFavorite && (
-            <Text style={styles.favoriteIndicator}>❤️</Text>
-          )}
+          {item.isFavorite && <Text style={styles.favoriteIndicator}>❤️</Text>}
         </View>
         {getTotalTime() && (
           <Text style={styles.recipeTime}>⏱️ {getTotalTime()}</Text>
@@ -180,17 +201,33 @@ export default function HomeScreen() {
           )}
         </View>
         <View style={styles.headerRight}>
+          {onLogout && (
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={() => {
+                Alert.alert("Logout", "Are you sure you want to logout?", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Logout", style: "destructive", onPress: onLogout },
+                ]);
+              }}
+            >
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={[styles.filterButton, showFavoritesOnly && styles.filterButtonActive]}
+            style={[
+              styles.filterButton,
+              showFavoritesOnly && styles.filterButtonActive,
+            ]}
             onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
           >
             <Text style={styles.filterButtonText}>
-              {showFavoritesOnly ? '❤️' : '🤍'} Favorites
+              {showFavoritesOnly ? "❤️" : "🤍"} Favorites
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => navigation.navigate('AddRecipe')}
+            onPress={() => navigation.navigate("AddRecipe")}
           >
             <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
@@ -210,7 +247,7 @@ export default function HomeScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
               <Text style={styles.clearSearchIcon}>✕</Text>
             </TouchableOpacity>
           )}
@@ -220,17 +257,19 @@ export default function HomeScreen() {
       {recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No recipes yet</Text>
-          <Text style={styles.emptySubtext}>Tap "Add Recipe" to get started</Text>
+          <Text style={styles.emptySubtext}>
+            Tap "Add Recipe" to get started
+          </Text>
         </View>
       ) : filterRecipes().length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {searchQuery ? 'No recipes found' : 'No favorite recipes'}
+            {searchQuery ? "No recipes found" : "No favorite recipes"}
           </Text>
           <Text style={styles.emptySubtext}>
-            {searchQuery 
-              ? 'Try a different search term' 
-              : 'Tap the ❤️ icon on a recipe to mark it as favorite'}
+            {searchQuery
+              ? "Try a different search term"
+              : "Tap the ❤️ icon on a recipe to mark it as favorite"}
           </Text>
         </View>
       ) : (
@@ -251,68 +290,80 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     paddingTop: 60,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   clearButton: {
     fontSize: 12,
-    color: '#f44336',
+    color: "#f44336",
     marginTop: 4,
   },
   headerRight: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   filterButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   filterButtonActive: {
-    backgroundColor: '#FFE5E5',
-    borderColor: '#FF6B6B',
+    backgroundColor: "#FFE5E5",
+    borderColor: "#FF6B6B",
   },
   filterButtonText: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+    color: "#666",
+    fontWeight: "600",
   },
   addButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
   },
+  logoutButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#FF3B30",
+    marginRight: 8,
+  },
+  logoutButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   searchContainer: {
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginHorizontal: 16,
@@ -320,7 +371,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   searchIcon: {
     fontSize: 18,
@@ -329,23 +380,23 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
     padding: 0,
   },
   clearSearchIcon: {
     fontSize: 18,
-    color: '#999',
+    color: "#999",
     padding: 4,
   },
   listContainer: {
     padding: 16,
   },
   recipeCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -353,14 +404,14 @@ const styles = StyleSheet.create({
   },
   recipeHeader: {
     marginBottom: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   recipeTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     flex: 1,
   },
   favoriteIndicator: {
@@ -369,54 +420,54 @@ const styles = StyleSheet.create({
   },
   recipeTime: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
     marginBottom: 8,
   },
   recipeDescription: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 12,
   },
   categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
     marginBottom: 12,
   },
   categoryChip: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: "#E8F5E9",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   categoryText: {
     fontSize: 11,
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: "#2E7D32",
+    fontWeight: "600",
   },
   recipeFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   recipeInfo: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
   },
   emptyText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#999',
+    fontWeight: "bold",
+    color: "#999",
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 16,
-    color: '#bbb',
-    textAlign: 'center',
+    color: "#bbb",
+    textAlign: "center",
   },
 });

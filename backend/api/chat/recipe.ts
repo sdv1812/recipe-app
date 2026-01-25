@@ -8,12 +8,13 @@ import {
   RecipeImport,
 } from "../../../shared/types";
 import { nanoid } from "nanoid";
-import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
+import { requireAuth, unauthorizedResponse } from "../../lib/auth";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Validate API key
-  if (!validateApiKey(req)) {
-    return unauthorizedResponse(res);
+  // Require authentication
+  const userId = requireAuth(req);
+  if (!userId) {
+    return unauthorizedResponse(res, "Authentication required");
   }
 
   if (req.method !== "POST") {

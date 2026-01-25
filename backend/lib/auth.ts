@@ -1,18 +1,9 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { verifyToken, extractTokenFromHeader } from "./jwt";
 
 export function validateApiKey(req: VercelRequest): boolean {
   const apiKey = req.headers["x-api-key"];
   const validKey = process.env.API_SECRET_KEY;
-
-  // Enhanced debug logging
-  console.log("=== API Key Validation Debug ===");
-  console.log("Received API Key:", apiKey);
-  console.log("Expected API Key:", validKey);
-  console.log("API_SECRET_KEY exists:", !!validKey);
-  console.log(
-    "All env vars with 'API':",
-    Object.keys(process.env).filter((k) => k.includes("API")),
-  );
 
   if (!validKey) {
     console.error("API_SECRET_KEY not configured");
@@ -26,19 +17,40 @@ export function validateApiKey(req: VercelRequest): boolean {
   const trimmedKey = keyToCheck?.trim();
   const trimmedValidKey = validKey.trim();
 
-  console.log("Key to check (after array handling):", keyToCheck);
-  console.log("Trimmed key:", trimmedKey);
-  console.log("Trimmed valid key:", trimmedValidKey);
-  console.log("Key lengths:", keyToCheck?.length, "vs", validKey.length);
-  console.log("Keys match:", trimmedKey === trimmedValidKey);
-  console.log("================================");
-
   return trimmedKey === trimmedValidKey;
 }
 
-export function unauthorizedResponse(res: VercelResponse) {
+/**
+ * Validate JWT token and return userId if valid
+ */
+export function validateAuthToken(req: VercelRequest): string | null {
+  const token = extractTokenFromHeader(req);
+
+  if (!token) {
+    return null;
+  }
+
+  const payload = verifyToken(token);
+  return payload?.userId || null;
+}
+
+/**
+ * Require authentication middleware - validates both API key and JWT token
+ */
+export function requireAuth(req: VercelRequest): string | null {
+  // First validate API key
+  if (!validateApiKey(req)) {
+    return null;
+  }
+
+  // Then validate JWT token
+  const userId = validateAuthToken(req);
+  return userId;
+}
+
+export function unauthorizedResponse(res: VercelResponse, message?: string) {
   return res.status(401).json({
     success: false,
-    error: "Unauthorized: Invalid or missing API key",
+    error: message || "Unauthorized: Invalid or missing API key",
   });
 }
