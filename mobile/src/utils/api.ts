@@ -3,7 +3,10 @@ import { RecipeImport, Recipe } from "../types/recipe";
 // Use your deployed backend URL or localhost for development
 const API_BASE_URL = __DEV__
   ? "http://localhost:3000/api"
-  : "https://your-vercel-app.vercel.app/api"; // Update with your Vercel URL
+  : "https://sous-ai-eta.vercel.app/api";
+
+// API key for authentication - keep this secure
+const API_KEY = "sousai_secret_2026_mobile_app";
 
 interface GenerateRecipeRequest {
   prompt: string;
@@ -41,6 +44,7 @@ export const api = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": API_KEY,
       },
       body: JSON.stringify({ prompt } as GenerateRecipeRequest),
     });
@@ -70,6 +74,7 @@ export const api = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": API_KEY,
       },
       body: JSON.stringify({
         recipeId,
@@ -98,6 +103,7 @@ export const api = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": API_KEY,
       },
       body: JSON.stringify(recipe),
     });
@@ -119,6 +125,7 @@ export const api = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": API_KEY,
       },
       body: JSON.stringify({ recipeId }),
     });

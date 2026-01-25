@@ -1,6 +1,7 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRecipesCollection } from '../../lib/db';
-import { Recipe } from '../../../shared/types';
+import { VercelRequest, VercelResponse } from "@vercel/node";
+import { getRecipesCollection } from "../../lib/db";
+import { Recipe } from "../../../shared/types";
+import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
 
 interface RecipeResponse {
   success: boolean;
@@ -9,16 +10,18 @@ interface RecipeResponse {
   error?: string;
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Validate API key
+  if (!validateApiKey(req)) {
+    return unauthorizedResponse(res);
+  }
+
   const { id } = req.query;
 
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Recipe ID is required' 
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "Recipe ID is required",
     });
   }
 
@@ -26,42 +29,42 @@ export default async function handler(
     const recipes = await getRecipesCollection();
 
     // GET - Get single recipe
-    if (req.method === 'GET') {
+    if (req.method === "GET") {
       const recipe = await recipes.findOne({ id });
 
       if (!recipe) {
         return res.status(404).json({
           success: false,
-          error: 'Recipe not found'
+          error: "Recipe not found",
         });
       }
 
       return res.status(200).json({
         success: true,
-        recipe
+        recipe,
       });
     }
 
     // PUT - Update recipe
-    if (req.method === 'PUT') {
+    if (req.method === "PUT") {
       const updates = req.body;
-      
+
       // TODO: Verify userId matches recipe owner when auth is implemented
-      
+
       const result = await recipes.updateOne(
         { id },
-        { 
+        {
           $set: {
             ...updates,
-            updatedAt: new Date().toISOString()
-          }
-        }
+            updatedAt: new Date().toISOString(),
+          },
+        },
       );
 
       if (result.matchedCount === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Recipe not found'
+          error: "Recipe not found",
         });
       }
 
@@ -69,40 +72,40 @@ export default async function handler(
 
       return res.status(200).json({
         success: true,
-        recipe: updatedRecipe || undefined
+        recipe: updatedRecipe || undefined,
       });
     }
 
     // DELETE - Delete recipe
-    if (req.method === 'DELETE') {
+    if (req.method === "DELETE") {
       // TODO: Verify userId matches recipe owner when auth is implemented
-      
+
       const result = await recipes.deleteOne({ id });
 
       if (result.deletedCount === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Recipe not found'
+          error: "Recipe not found",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: 'Recipe deleted successfully'
+        message: "Recipe deleted successfully",
       });
     }
 
-    return res.status(405).json({ 
-      success: false, 
-      error: 'Method not allowed' 
+    return res.status(405).json({
+      success: false,
+      error: "Method not allowed",
     });
-
   } catch (error) {
-    console.error('Error in recipe handler:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    console.error("Error in recipe handler:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
     return res.status(500).json({
       success: false,
-      error: errorMessage
+      error: errorMessage,
     });
   }
 }

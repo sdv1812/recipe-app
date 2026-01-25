@@ -1,23 +1,32 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateRecipe } from '../lib/openai';
-import { GenerateRecipeRequest, GenerateRecipeResponse, RecipeImport } from '../../shared/types';
+import { VercelRequest, VercelResponse } from "@vercel/node";
+import { generateRecipe } from "../lib/openai";
+import {
+  GenerateRecipeRequest,
+  GenerateRecipeResponse,
+  RecipeImport,
+} from "../../shared/types";
+import { validateApiKey, unauthorizedResponse } from "../lib/auth";
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Validate API key
+  if (!validateApiKey(req)) {
+    return unauthorizedResponse(res);
+  }
+
   // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res
+      .status(405)
+      .json({ success: false, error: "Method not allowed" });
   }
 
   try {
     const { prompt } = req.body as GenerateRecipeRequest;
 
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Prompt is required and must be a string' 
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Prompt is required and must be a string",
       });
     }
 
@@ -69,21 +78,21 @@ IMPORTANT:
       if (jsonMatch) {
         recipe = JSON.parse(jsonMatch[0]);
       } else {
-        throw new Error('Failed to parse recipe JSON from AI response');
+        throw new Error("Failed to parse recipe JSON from AI response");
       }
     }
 
     return res.status(200).json({
       success: true,
-      recipe
+      recipe,
     });
-
   } catch (error) {
-    console.error('Error generating recipe:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate recipe';
+    console.error("Error generating recipe:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to generate recipe";
     return res.status(500).json({
       success: false,
-      error: errorMessage
+      error: errorMessage,
     });
   }
 }
