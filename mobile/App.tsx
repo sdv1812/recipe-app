@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { RootStackParamList } from "./src/navigation/types";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { RootStackParamList, TabParamList } from "./src/navigation/types";
 import HomeScreen from "./src/screens/HomeScreen";
 import AddRecipeScreen from "./src/screens/AddRecipeScreen";
 import RecipeDetailScreen from "./src/screens/RecipeDetailScreen";
@@ -11,6 +12,53 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import { authStorage } from "./src/utils/storage";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+// Bottom Tab Navigator Component
+function MainTabs({ onLogout }: { onLogout: () => void }) {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: "#007AFF",
+        tabBarInactiveTintColor: "#8E8E93",
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: "#E5E5EA",
+          paddingTop: 8,
+          paddingBottom: 28, // Increased for iPhone home indicator
+          height: 80, // Increased to accommodate bottom padding
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Tab.Screen
+        name="MyRecipes"
+        options={{
+          tabBarLabel: "My Recipes",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ fontSize: 24 }}>📚</Text>
+          ),
+        }}
+      >
+        {(props) => <HomeScreen {...props} onLogout={onLogout} />}
+      </Tab.Screen>
+      <Tab.Screen
+        name="AIChef"
+        component={AddRecipeScreen}
+        options={{
+          tabBarLabel: "AI Chef",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ fontSize: 24 }}>🤖</Text>
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,13 +123,19 @@ export default function App() {
             </Stack.Screen>
           </>
         ) : (
-          // Main App Stack
+          // Main App Stack with Tabs
           <>
-            <Stack.Screen name="Home">
-              {(props) => <HomeScreen {...props} onLogout={handleLogout} />}
+            <Stack.Screen name="MainTabs">
+              {(props) => <MainTabs {...props} onLogout={handleLogout} />}
             </Stack.Screen>
-            <Stack.Screen name="AddRecipe" component={AddRecipeScreen} />
-            <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+            <Stack.Screen
+              name="RecipeDetail"
+              component={RecipeDetailScreen}
+              options={{
+                presentation: "modal",
+                animation: "slide_from_bottom",
+              }}
+            />
           </>
         )}
       </Stack.Navigator>

@@ -22,7 +22,7 @@ import { api } from "../utils/api";
 
 type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "AddRecipe"
+  "MainTabs"
 >;
 
 export default function AddRecipeScreen() {
@@ -60,7 +60,8 @@ export default function AddRecipeScreen() {
       Alert.alert("Success", "Recipe imported successfully!", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("Home"),
+          onPress: () =>
+            navigation.navigate("MainTabs", { screen: "MyRecipes" }),
         },
       ]);
       setJsonText("");
@@ -106,7 +107,7 @@ export default function AddRecipeScreen() {
           text: "OK",
           onPress: () => {
             setAiPrompt("");
-            navigation.navigate("Home");
+            navigation.navigate("MainTabs", { screen: "MyRecipes" });
           },
         },
       ]);
@@ -126,14 +127,7 @@ export default function AddRecipeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Recipe</Text>
-        <View style={{ width: 60 }} />
+        <Text style={styles.headerTitle}>AI Chef</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -320,13 +314,13 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#333",
   },

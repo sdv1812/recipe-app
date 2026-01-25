@@ -19,7 +19,7 @@ import { formatTime } from "../utils/timeFormatter";
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "Home"
+  "MainTabs"
 >;
 
 type HomeScreenProps = {
@@ -27,7 +27,7 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ onLogout }: HomeScreenProps) {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const navigation = useNavigation<any>(); // Using any to access tab navigation
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -246,12 +246,6 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
               {showFavoritesOnly ? "❤️" : "🤍"} Favorites
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate("AddRecipe")}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -284,7 +278,7 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No recipes yet</Text>
           <Text style={styles.emptySubtext}>
-            Tap "+ Add" to create your first recipe
+            Tap "AI Chef" tab to create your first recipe
           </Text>
         </View>
       ) : filterRecipes().length === 0 ? (
@@ -309,6 +303,16 @@ export default function HomeScreen({ onLogout }: HomeScreenProps) {
           }
         />
       )}
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate("AIChef")}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabIcon}>🤖</Text>
+        <Text style={styles.fabText}>AI</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -505,5 +509,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#bbb",
     textAlign: "center",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "#007AFF",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 24,
+  },
+  fabText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: -2,
   },
 });
