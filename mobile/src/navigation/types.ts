@@ -16,6 +16,7 @@ export type RootStackParamList = {
   RecipeDetail: { recipeId: string };
   Preferences: undefined;
   Settings: undefined;
+  ImportJson: undefined;
 };
 
 declare global {

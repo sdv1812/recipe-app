@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,294 +13,268 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Clipboard from "expo-clipboard";
 import { RootStackParamList } from "../navigation/types";
-import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
 import { RecipeImport } from "../../../shared/types";
-import { CHATGPT_PROMPT } from "../constants/prompts";
 import { api } from "../utils/api";
+import RecipePreviewModal from "../components/RecipePreviewModal";
 
 type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "MainTabs"
 >;
 
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  recipe?: RecipeImport;
+}
+
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    '👋 Hi! I\'m your AI Chef assistant. Tell me what you\'d like to cook today!\n\nYou can say things like:\n• "I want a healthy dinner recipe"\n• "Something quick with chicken"\n• "Vegetarian pasta under 30 minutes"\n• "Dessert for 4 people"',
+  timestamp: new Date().toISOString(),
+};
+
 export default function AddRecipeScreen() {
   const navigation = useNavigation<AddRecipeScreenNavigationProp>();
-  const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"ai" | "paste">("ai");
-  const [jsonText, setJsonText] = useState("");
-  const [aiPrompt, setAiPrompt] = useState("");
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const handlePasteJson = async () => {
-    if (!jsonText.trim()) {
-      Alert.alert("Empty Input", "Please paste your recipe JSON first");
-      return;
-    }
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
+    WELCOME_MESSAGE,
+  ]);
+  const [userMessage, setUserMessage] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
 
-    setLoading(true);
+  useEffect(() => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [chatHistory]);
+
+  const handleSendMessage = async () => {
+    if (!userMessage.trim() || isGenerating) return;
+
+    const message = userMessage.trim();
+    setUserMessage("");
+    setIsGenerating(true);
+
+    const newUserMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: message,
+      timestamp: new Date().toISOString(),
+    };
+
+    setChatHistory((prev) => [...prev, newUserMessage]);
+
     try {
-      const jsonData = JSON.parse(jsonText) as RecipeImport;
+      const recipeData = await api.generateRecipe(message);
 
-      // Validate JSON structure
-      const validation = validateRecipeJson(jsonData);
-      if (!validation.valid) {
-        Alert.alert(
-          "Invalid Recipe",
-          validation.error || "The recipe format is invalid",
-        );
-        setLoading(false);
-        return;
-      }
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `Great! I've created a recipe for you: **${recipeData.title}**\n\nTap the card below to preview it. You can save it to your library or ask me to modify it!`,
+        timestamp: new Date().toISOString(),
+        recipe: recipeData,
+      };
 
-      // Parse and save recipe
-      const recipe = parseRecipeJson(jsonData);
-      await api.createRecipe(jsonData);
-
-      Alert.alert("Success", "Recipe imported successfully!", [
-        {
-          text: "OK",
-          onPress: () =>
-            navigation.navigate("MainTabs", { screen: "MyRecipes" }),
-        },
-      ]);
-      setJsonText("");
+      setChatHistory((prev) => [...prev, aiMessage]);
     } catch (error) {
-      console.error("Error parsing JSON:", error);
-      Alert.alert(
-        "Invalid JSON",
-        "Could not parse JSON. Please check the format and try again.",
-      );
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `Sorry, I had trouble creating that recipe. ${error instanceof Error ? error.message : "Please try again or rephrase your request."}`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setChatHistory((prev) => [...prev, errorMessage]);
     } finally {
-      setLoading(false);
+      setIsGenerating(false);
     }
   };
 
-  const handleCopyPrompt = async () => {
-    await Clipboard.setStringAsync(CHATGPT_PROMPT);
-    Alert.alert("Copied!", "ChatGPT prompt copied to clipboard");
+  const handlePreviewRecipe = (recipe: RecipeImport) => {
+    setPreviewRecipe(recipe);
   };
 
-  const handleGenerateWithAI = async () => {
-    if (!aiPrompt.trim()) {
-      Alert.alert(
-        "Empty Prompt",
-        "Please describe the recipe you want to generate",
-      );
-      return;
-    }
-
+  const handleSaveRecipe = async (recipe: RecipeImport) => {
     try {
-      setLoading(true);
+      await api.createRecipe(recipe);
 
-      // Call AI generation API
-      const generatedRecipe = await api.generateRecipe(aiPrompt.trim());
+      const confirmMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `✅ Perfect! "${recipe.title}" has been saved to your library. Would you like to create another recipe?`,
+        timestamp: new Date().toISOString(),
+      };
 
-      // Parse for display
-      const recipe = parseRecipeJson(generatedRecipe);
+      setChatHistory((prev) => [...prev, confirmMessage]);
+      setPreviewRecipe(null);
 
-      // Save the generated recipe to the database
-      await api.createRecipe(generatedRecipe);
-
-      Alert.alert("Success", `"${recipe.title}" generated successfully!`, [
-        {
-          text: "OK",
-          onPress: () => {
-            setAiPrompt("");
-            navigation.navigate("MainTabs", { screen: "MyRecipes" });
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Error generating recipe:", error);
       Alert.alert(
-        "Generation Failed",
+        "Recipe Saved!",
+        `"${recipe.title}" has been added to your library.`,
+        [{ text: "OK" }],
+      );
+    } catch (error) {
+      Alert.alert(
+        "Error",
         error instanceof Error
           ? error.message
-          : "Failed to generate recipe. Please try again.",
+          : "Failed to save recipe. Please try again.",
       );
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleDiscardRecipe = () => {
+    const discardMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content:
+        "No problem! Tell me what you'd like me to change about the recipe, or ask for something completely different.",
+      timestamp: new Date().toISOString(),
+    };
+
+    setChatHistory((prev) => [...prev, discardMessage]);
+    setPreviewRecipe(null);
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    const isUser = message.role === "user";
+
+    return (
+      <View key={message.id} style={styles.messageContainer}>
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userBubble : styles.assistantBubble,
+          ]}
+        >
+          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+            {message.content}
+          </Text>
+
+          {message.recipe && (
+            <TouchableOpacity
+              style={styles.recipeCard}
+              onPress={() => handlePreviewRecipe(message.recipe!)}
+            >
+              <View style={styles.recipeCardHeader}>
+                <Text style={styles.recipeCardTitle}>
+                  {message.recipe.title}
+                </Text>
+                <Text style={styles.recipeCardIcon}>👉</Text>
+              </View>
+
+              {message.recipe.description && (
+                <Text style={styles.recipeCardDescription} numberOfLines={2}>
+                  {message.recipe.description}
+                </Text>
+              )}
+
+              <View style={styles.recipeCardMeta}>
+                {message.recipe.servings && (
+                  <Text style={styles.recipeCardMetaItem}>
+                    🍽️ {message.recipe.servings} servings
+                  </Text>
+                )}
+                {message.recipe.prepTimeMinutes && (
+                  <Text style={styles.recipeCardMetaItem}>
+                    ⏱️{" "}
+                    {message.recipe.prepTimeMinutes +
+                      (message.recipe.cookTimeMinutes || 0)}{" "}
+                    min
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.recipeCardFooter}>
+                <Text style={styles.recipeCardCTA}>
+                  Tap to preview and save →
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
+          {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
+      </View>
+    );
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={80}
+    >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Chef</Text>
+        <Text style={styles.headerTitle}>🤖 AI Chef</Text>
+        <Text style={styles.headerSubtitle}>
+          Chat to create your perfect recipe
+        </Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Mode Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, mode === "ai" && styles.activeTab]}
-            onPress={() => setMode("ai")}
-          >
-            <Text
-              style={[styles.tabText, mode === "ai" && styles.activeTabText]}
-            >
-              🤖 Generate with AI
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, mode === "paste" && styles.activeTab]}
-            onPress={() => setMode("paste")}
-          >
-            <Text
-              style={[styles.tabText, mode === "paste" && styles.activeTabText]}
-            >
-              📝 Paste JSON
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.chatContainer}
+        contentContainerStyle={styles.chatContent}
+      >
+        {chatHistory.map((message) => renderMessage(message))}
 
-        {mode === "ai" ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.modeContent}
-          >
-            <Text style={styles.instructionText}>
-              Describe the recipe you'd like to create, and AI will generate it
-              for you.
-            </Text>
-
-            <Text style={styles.exampleLabel}>Examples:</Text>
-            <View style={styles.examplesContainer}>
-              <TouchableOpacity
-                style={styles.exampleChip}
-                onPress={() =>
-                  setAiPrompt("healthy chicken salad with avocado")
-                }
-              >
-                <Text style={styles.exampleText}>🥗 Healthy chicken salad</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.exampleChip}
-                onPress={() => setAiPrompt("quick 15-minute pasta carbonara")}
-              >
-                <Text style={styles.exampleText}>🍝 Quick pasta carbonara</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.exampleChip}
-                onPress={() => setAiPrompt("vegan chocolate chip cookies")}
-              >
-                <Text style={styles.exampleText}>🍪 Vegan cookies</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.promptInput}
-                multiline
-                placeholder="E.g., spicy Thai basil chicken stir-fry with vegetables..."
-                value={aiPrompt}
-                onChangeText={setAiPrompt}
-                textAlignVertical="top"
-              />
-              {aiPrompt.trim() && (
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => setAiPrompt("")}
-                >
-                  <Text style={styles.clearIcon}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handleGenerateWithAI}
-              disabled={loading || !aiPrompt.trim()}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.uploadButtonText}>✨ Generate Recipe</Text>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.noteText}>
-              💡 Tip: Be specific! Include cuisine type, dietary restrictions,
-              cooking time, or specific ingredients.
-            </Text>
-          </KeyboardAvoidingView>
-        ) : (
-          <View style={styles.modeContent}>
-            <Text style={styles.instructionText}>
-              Paste the JSON recipe from ChatGPT below.
-            </Text>
-
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.jsonInput}
-                multiline
-                placeholder="Paste your recipe JSON here..."
-                value={jsonText}
-                onChangeText={setJsonText}
-                textAlignVertical="top"
-              />
-              {jsonText.trim() && (
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => setJsonText("")}
-                >
-                  <Text style={styles.clearIcon}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handlePasteJson}
-              disabled={loading || !jsonText.trim()}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.uploadIcon}>✅</Text>
-                  <Text style={styles.uploadButtonText}>Import Recipe</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.exampleContainer}>
-              <Text style={styles.exampleTitle}>Expected JSON Format:</Text>
-              <View style={styles.exampleBox}>
-                <Text style={styles.exampleCode}>
-                  {`{
-  "title": "Recipe Name",
-  "description": "Optional description",
-  "servings": 4,
-  "prepTimeMinutes": 15,
-  "marinateTimeMinutes": 0,
-  "cookTimeMinutes": 30,
-  "category": ["chicken", "indian"],
-  "tags": ["spicy", "meal-prep"],
-  "ingredients": [
-    {
-      "name": "Flour",
-      "quantity": "2",
-      "unit": "cups"
-    }
-  ],
-  "preparationSteps": [
-    "Mix ingredients",
-    "Let rest for 10 minutes"
-  ],
-  "cookingSteps": [
-    "Preheat oven to 350°F",
-    "Bake for 20 minutes"
-  ]
-}`}
-                </Text>
-              </View>
+        {isGenerating && (
+          <View style={styles.typingContainer}>
+            <View style={styles.typingBubble}>
+              <ActivityIndicator size="small" color="#666" />
+              <Text style={styles.typingText}>AI Chef is cooking...</Text>
             </View>
           </View>
         )}
       </ScrollView>
-    </View>
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Ask for a recipe..."
+          value={userMessage}
+          onChangeText={setUserMessage}
+          multiline
+          maxLength={500}
+          editable={!isGenerating}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            (!userMessage.trim() || isGenerating) && styles.sendButtonDisabled,
+          ]}
+          onPress={handleSendMessage}
+          disabled={!userMessage.trim() || isGenerating}
+        >
+          <Text style={styles.sendButtonText}>
+            {isGenerating ? "..." : "→"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {previewRecipe && (
+        <RecipePreviewModal
+          recipe={previewRecipe}
+          visible={!!previewRecipe}
+          onSave={handleSaveRecipe}
+          onDiscard={handleDiscardRecipe}
+        />
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
@@ -311,199 +285,166 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#fff",
-    padding: 20,
     paddingTop: 60,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
+    paddingBottom: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#333",
+    marginBottom: 4,
   },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: "#4CAF50",
-    fontWeight: "600",
-  },
-  content: {
-    flex: 1,
-  },
-  copyPromptButton: {
-    backgroundColor: "#2196F3",
-    padding: 16,
-    margin: 20,
-    marginBottom: 10,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copyPromptIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  copyPromptText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  tabContainer: {
-    flexDirection: "row",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  activeTab: {
-    backgroundColor: "#4CAF50",
-  },
-  tabText: {
+  headerSubtitle: {
     fontSize: 14,
     color: "#666",
-    fontWeight: "600",
   },
-  activeTabText: {
-    color: "#fff",
+  chatContainer: {
+    flex: 1,
   },
-  modeContent: {
-    paddingHorizontal: 20,
+  chatContent: {
+    padding: 16,
   },
-  instructionText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  inputWrapper: {
-    position: "relative",
+  messageContainer: {
     marginBottom: 16,
   },
-  jsonInput: {
+  messageBubble: {
+    maxWidth: "80%",
+    padding: 12,
+    borderRadius: 16,
+  },
+  userBubble: {
+    backgroundColor: "#007AFF",
+    alignSelf: "flex-end",
+  },
+  assistantBubble: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    paddingRight: 48,
-    fontSize: 14,
-    fontFamily: "monospace",
-    minHeight: 200,
-    maxHeight: 300,
+    alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  clearButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#e0e0e0",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  messageText: {
+    fontSize: 15,
+    color: "#333",
+    lineHeight: 20,
   },
-  clearIcon: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  uploadButton: {
-    backgroundColor: "#4CAF50",
-    padding: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 32,
-  },
-  uploadIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  uploadButtonText: {
+  userMessageText: {
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
   },
-  exampleContainer: {
-    backgroundColor: "#fff",
+  timestamp: {
+    fontSize: 11,
+    color: "#999",
+    marginTop: 4,
+    marginLeft: 8,
+  },
+  userTimestamp: {
+    textAlign: "right",
+    marginRight: 8,
+    marginLeft: 0,
+  },
+  recipeCard: {
+    marginTop: 12,
+    backgroundColor: "#f8f9fa",
     borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: "#007AFF",
   },
-  exampleTitle: {
+  recipeCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  recipeCardTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 12,
+    flex: 1,
   },
-  exampleBox: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+  recipeCardIcon: {
+    fontSize: 20,
+    marginLeft: 8,
   },
-  exampleCode: {
-    fontFamily: "monospace",
-    fontSize: 12,
-    color: "#333",
+  recipeCardDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 8,
     lineHeight: 18,
   },
-  promptInput: {
+  recipeCardMeta: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+  },
+  recipeCardMetaItem: {
+    fontSize: 12,
+    color: "#666",
+  },
+  recipeCardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  recipeCardCTA: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#007AFF",
+    textAlign: "center",
+  },
+  typingContainer: {
+    marginBottom: 16,
+  },
+  typingBubble: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    paddingRight: 48,
-    fontSize: 16,
-    minHeight: 120,
-    maxHeight: 200,
+    alignSelf: "flex-start",
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  exampleLabel: {
+  typingText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#666",
-    marginBottom: 12,
+    marginLeft: 8,
   },
-  examplesContainer: {
+  inputContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 20,
-    gap: 8,
-  },
-  exampleChip: {
+    padding: 16,
     backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    paddingBottom: 32,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    fontSize: 15,
+    maxHeight: 100,
+    marginRight: 8,
   },
-  exampleText: {
-    fontSize: 14,
-    color: "#666",
+  sendButton: {
+    backgroundColor: "#007AFF",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  noteText: {
-    fontSize: 13,
-    color: "#999",
-    fontStyle: "italic",
-    marginTop: 16,
-    lineHeight: 20,
+  sendButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  sendButtonText: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "600",
   },
 });

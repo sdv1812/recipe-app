@@ -49,6 +49,11 @@ export default function SettingsDrawer({
     navigation.navigate("Preferences");
   };
 
+  const handleImportJson = () => {
+    onClose();
+    navigation.navigate("ImportJson");
+  };
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -99,6 +104,19 @@ export default function SettingsDrawer({
               <Text style={styles.menuTitle}>My Preferences</Text>
               <Text style={styles.menuSubtitle}>
                 Manage your dietary preferences
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleImportJson}>
+            <Text style={styles.menuIcon}>📥</Text>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuTitle}>Import Recipe JSON</Text>
+              <Text style={styles.menuSubtitle}>
+                Import recipes from JSON format
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
