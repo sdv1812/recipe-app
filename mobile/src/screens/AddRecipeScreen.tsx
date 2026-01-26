@@ -1,22 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
 import RecipePreviewModal from "../components/RecipePreviewModal";
+import ChatInterface from "../components/ChatInterface";
 
 type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -41,7 +31,6 @@ const WELCOME_MESSAGE: ChatMessage = {
 
 export default function AddRecipeScreen() {
   const navigation = useNavigation<AddRecipeScreenNavigationProp>();
-  const scrollViewRef = useRef<ScrollView>(null);
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     WELCOME_MESSAGE,
@@ -49,12 +38,6 @@ export default function AddRecipeScreen() {
   const [userMessage, setUserMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
-
-  useEffect(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [chatHistory]);
 
   const handleSendMessage = async () => {
     if (!userMessage.trim() || isGenerating) return;
@@ -144,127 +127,61 @@ export default function AddRecipeScreen() {
     setPreviewRecipe(null);
   };
 
-  const renderMessage = (message: ChatMessage) => {
-    const isUser = message.role === "user";
+  const renderRecipeCard = (message: ChatMessage) => {
+    if (!message.recipe) return null;
 
     return (
-      <View key={message.id} style={styles.messageContainer}>
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-        >
-          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-            {message.content}
+      <TouchableOpacity
+        style={styles.recipeCard}
+        onPress={() => handlePreviewRecipe(message.recipe!)}
+      >
+        <View style={styles.recipeCardHeader}>
+          <Text style={styles.recipeCardTitle}>{message.recipe.title}</Text>
+          <Text style={styles.recipeCardIcon}>👉</Text>
+        </View>
+
+        {message.recipe.description && (
+          <Text style={styles.recipeCardDescription} numberOfLines={2}>
+            {message.recipe.description}
           </Text>
+        )}
 
-          {message.recipe && (
-            <TouchableOpacity
-              style={styles.recipeCard}
-              onPress={() => handlePreviewRecipe(message.recipe!)}
-            >
-              <View style={styles.recipeCardHeader}>
-                <Text style={styles.recipeCardTitle}>
-                  {message.recipe.title}
-                </Text>
-                <Text style={styles.recipeCardIcon}>👉</Text>
-              </View>
-
-              {message.recipe.description && (
-                <Text style={styles.recipeCardDescription} numberOfLines={2}>
-                  {message.recipe.description}
-                </Text>
-              )}
-
-              <View style={styles.recipeCardMeta}>
-                {message.recipe.servings && (
-                  <Text style={styles.recipeCardMetaItem}>
-                    🍽️ {message.recipe.servings} servings
-                  </Text>
-                )}
-                {message.recipe.prepTimeMinutes && (
-                  <Text style={styles.recipeCardMetaItem}>
-                    ⏱️{" "}
-                    {message.recipe.prepTimeMinutes +
-                      (message.recipe.cookTimeMinutes || 0)}{" "}
-                    min
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.recipeCardFooter}>
-                <Text style={styles.recipeCardCTA}>
-                  Tap to preview and save →
-                </Text>
-              </View>
-            </TouchableOpacity>
+        <View style={styles.recipeCardMeta}>
+          {message.recipe.servings && (
+            <Text style={styles.recipeCardMetaItem}>
+              🍽️ {message.recipe.servings} servings
+            </Text>
+          )}
+          {message.recipe.prepTimeMinutes && (
+            <Text style={styles.recipeCardMetaItem}>
+              ⏱️{" "}
+              {message.recipe.prepTimeMinutes +
+                (message.recipe.cookTimeMinutes || 0)}{" "}
+              min
+            </Text>
           )}
         </View>
 
-        <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-          {new Date(message.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
-      </View>
+        <View style={styles.recipeCardFooter}>
+          <Text style={styles.recipeCardCTA}>Tap to preview and save →</Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={80}
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>🤖 AI Chef</Text>
-        <Text style={styles.headerSubtitle}>
-          Chat to create your perfect recipe
-        </Text>
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.chatContainer}
-        contentContainerStyle={styles.chatContent}
-      >
-        {chatHistory.map((message) => renderMessage(message))}
-
-        {isGenerating && (
-          <View style={styles.typingContainer}>
-            <View style={styles.typingBubble}>
-              <ActivityIndicator size="small" color="#666" />
-              <Text style={styles.typingText}>AI Chef is cooking...</Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Ask for a recipe..."
-          value={userMessage}
-          onChangeText={setUserMessage}
-          multiline
-          maxLength={500}
-          editable={!isGenerating}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!userMessage.trim() || isGenerating) && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSendMessage}
-          disabled={!userMessage.trim() || isGenerating}
-        >
-          <Text style={styles.sendButtonText}>
-            {isGenerating ? "..." : "→"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ChatInterface
+        chatHistory={chatHistory}
+        userMessage={userMessage}
+        isGenerating={isGenerating}
+        placeholder="Ask for a recipe..."
+        headerTitle="🤖 AI Chef"
+        headerSubtitle="Chat to create your perfect recipe"
+        onMessageChange={setUserMessage}
+        onSendMessage={handleSendMessage}
+        renderMessageExtras={renderRecipeCard}
+      />
 
       {previewRecipe && (
         <RecipePreviewModal
@@ -274,7 +191,7 @@ export default function AddRecipeScreen() {
           onDiscard={handleDiscardRecipe}
         />
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -282,67 +199,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
-  },
-  header: {
-    backgroundColor: "#fff",
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#666",
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  chatContent: {
-    padding: 16,
-  },
-  messageContainer: {
-    marginBottom: 16,
-  },
-  messageBubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 16,
-  },
-  userBubble: {
-    backgroundColor: "#007AFF",
-    alignSelf: "flex-end",
-  },
-  assistantBubble: {
-    backgroundColor: "#fff",
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  messageText: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 20,
-  },
-  userMessageText: {
-    color: "#fff",
-  },
-  timestamp: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 4,
-    marginLeft: 8,
-  },
-  userTimestamp: {
-    textAlign: "right",
-    marginRight: 8,
-    marginLeft: 0,
   },
   recipeCard: {
     marginTop: 12,
@@ -394,57 +250,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#007AFF",
     textAlign: "center",
-  },
-  typingContainer: {
-    marginBottom: 16,
-  },
-  typingBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    alignSelf: "flex-start",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  typingText: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 8,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    padding: 16,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingBottom: 32,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    maxHeight: 100,
-    marginRight: 8,
-  },
-  sendButton: {
-    backgroundColor: "#007AFF",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sendButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  sendButtonText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "600",
   },
 });
