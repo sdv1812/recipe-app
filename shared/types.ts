@@ -98,6 +98,18 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface GroceryItem {
+  id: string;
+  userId: string;
+  name: string;
+  quantity?: string;
+  unit?: string;
+  completed: boolean;
+  recipeIds: string[]; // Track which recipes this item came from
+  createdAt: string;
+  completedAt?: string;
+}
+
 // API Request/Response types
 export interface GenerateRecipeRequest {
   prompt: string;

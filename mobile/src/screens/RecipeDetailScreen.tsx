@@ -17,7 +17,11 @@ import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
-import { useRecipe, useUpdateRecipe } from "../utils/queries";
+import {
+  useRecipe,
+  useUpdateRecipe,
+  useAddToGroceries,
+} from "../utils/queries";
 
 type RecipeDetailRouteProp = RouteProp<RootStackParamList, "RecipeDetail">;
 type RecipeDetailNavigationProp = NativeStackNavigationProp<
@@ -37,7 +41,7 @@ const WELCOME_MESSAGE: ChatMessageWithRecipe = {
   id: "welcome",
   role: "assistant",
   content:
-    "👋 Hi! I'm here to help you modify this recipe.\n\nYou can ask me to:\n• \"Make it less spicy\"\n• \"Add more vegetables\"\n• \"Make it vegan\"\n• \"Reduce cooking time\"\n\nTap the recipe card below to see the current version!",
+    '👋 Hi! I\'m here to help you modify this recipe.\n\nYou can ask me to:\n• "Make it less spicy"\n• "Add more vegetables"\n• "Make it vegan"\n• "Reduce cooking time"\n\nTap the recipe card below to see the current version!',
   timestamp: new Date().toISOString(),
 };
 
@@ -49,6 +53,7 @@ export default function RecipeDetailScreen() {
   // Use React Query hooks
   const { data: recipe, isLoading, refetch } = useRecipe(recipeId);
   const updateMutation = useUpdateRecipe();
+  const addToGroceriesMutation = useAddToGroceries();
 
   const [activeTab, setActiveTab] = useState<
     "ingredients" | "prep" | "cooking" | "shopping"
@@ -59,6 +64,9 @@ export default function RecipeDetailScreen() {
   const [isChatting, setIsChatting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
+  const [selectedShoppingItems, setSelectedShoppingItems] = useState<
+    Set<string>
+  >(new Set());
 
   useEffect(() => {
     // Initialize chat history with welcome message and recipe
@@ -146,7 +154,8 @@ export default function RecipeDetailScreen() {
       const aiMessage: ChatMessageWithRecipe = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "I've suggested changes to your recipe! Tap the card below to preview and accept/discard the changes.",
+        content:
+          "I've suggested changes to your recipe! Tap the card below to preview and accept/discard the changes.",
         timestamp: new Date().toISOString(),
         recipe: recipeAsImport,
       };
@@ -289,12 +298,68 @@ export default function RecipeDetailScreen() {
   const formatTimeBreakdown = () => {
     if (!recipe) return "";
     const parts = [];
-    if (recipe.prepTimeMinutes)
-      parts.push(`Prep: ${recipe.prepTimeMinutes}m`);
+    if (recipe.prepTimeMinutes) parts.push(`Prep: ${recipe.prepTimeMinutes}m`);
     if (recipe.marinateTimeMinutes)
       parts.push(`Marinate: ${recipe.marinateTimeMinutes}m`);
     if (recipe.cookTimeMinutes) parts.push(`Cook: ${recipe.cookTimeMinutes}m`);
     return parts.join(" • ");
+  };
+
+  const toggleSelectShoppingItem = (itemId: string) => {
+    setSelectedShoppingItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllShoppingItems = () => {
+    if (!recipe) return;
+    const allIds = new Set(recipe.shoppingList.map((item) => item.id));
+    setSelectedShoppingItems(allIds);
+  };
+
+  const deselectAllShoppingItems = () => {
+    setSelectedShoppingItems(new Set());
+  };
+
+  const handleAddToGroceries = async () => {
+    if (!recipe || selectedShoppingItems.size === 0) return;
+
+    const itemsToAdd = recipe.shoppingList
+      .filter((item) => selectedShoppingItems.has(item.id))
+      .map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+      }));
+
+    try {
+      await addToGroceriesMutation.mutateAsync({
+        items: itemsToAdd,
+        recipeId: recipe.id,
+      });
+
+      Alert.alert(
+        "Added to Groceries!",
+        `${itemsToAdd.length} item(s) added to your grocery list.`,
+        [{ text: "OK" }],
+      );
+
+      // Clear selection
+      setSelectedShoppingItems(new Set());
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Failed to add items to groceries",
+      );
+    }
   };
 
   const renderRecipeCard = (message: ChatMessageWithRecipe) => {
@@ -429,7 +494,10 @@ export default function RecipeDetailScreen() {
 
         <View style={styles.tabs}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "ingredients" && styles.activeTab]}
+            style={[
+              styles.tab,
+              activeTab === "ingredients" && styles.activeTab,
+            ]}
             onPress={() => setActiveTab("ingredients")}
           >
             <Text
@@ -510,7 +578,9 @@ export default function RecipeDetailScreen() {
                     </Text>
                   </View>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepNumber}>Step {step.stepNumber}</Text>
+                    <Text style={styles.stepNumber}>
+                      Step {step.stepNumber}
+                    </Text>
                     <Text
                       style={[
                         styles.stepText,
@@ -566,29 +636,59 @@ export default function RecipeDetailScreen() {
           )}
 
           {activeTab === "shopping" && (
-            <View style={styles.shoppingContainer}>
-              {recipe.shoppingList.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.shoppingItem}
-                  onPress={() => toggleShoppingItem(item.id)}
-                >
-                  <View style={styles.stepCheckbox}>
-                    <Text style={styles.stepCheckboxText}>
-                      {item.purchased ? "✓" : ""}
+            <>
+              <View style={styles.shoppingHeader}>
+                <View style={styles.selectionControls}>
+                  {selectedShoppingItems.size === recipe.shoppingList.length ? (
+                    <TouchableOpacity onPress={deselectAllShoppingItems}>
+                      <Text style={styles.selectionButton}>Deselect All</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={selectAllShoppingItems}>
+                      <Text style={styles.selectionButton}>Select All</Text>
+                    </TouchableOpacity>
+                  )}
+                  {selectedShoppingItems.size > 0 && (
+                    <Text style={styles.selectedCount}>
+                      {selectedShoppingItems.size} selected
                     </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.shoppingText,
-                      item.purchased && styles.purchasedText,
-                    ]}
+                  )}
+                </View>
+                {selectedShoppingItems.size > 0 && (
+                  <TouchableOpacity
+                    style={styles.addToGroceriesButton}
+                    onPress={handleAddToGroceries}
                   >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <Text style={styles.addToGroceriesButtonText}>
+                      🛒 Add to Groceries
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.shoppingContainer}>
+                {recipe.shoppingList.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.shoppingItemWrapper}
+                    onPress={() => toggleSelectShoppingItem(item.id)}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        selectedShoppingItems.has(item.id) &&
+                          styles.checkboxSelected,
+                      ]}
+                    >
+                      {selectedShoppingItems.has(item.id) && (
+                        <Text style={styles.checkboxText}>✓</Text>
+                      )}
+                    </View>
+                    <Text style={styles.shoppingText}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -878,13 +978,65 @@ const styles = StyleSheet.create({
   shoppingContainer: {
     padding: 20,
   },
-  shoppingItem: {
+  shoppingHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+  },
+  selectionControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  selectionButton: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+  selectedCount: {
+    fontSize: 14,
+    color: "#666",
+  },
+  addToGroceriesButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  addToGroceriesButtonText: {
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  shoppingItemWrapper: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
     padding: 12,
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  checkboxSelected: {
+    backgroundColor: "#007AFF",
+  },
+  checkboxText: {
+    fontSize: 12,
+    color: "#fff",
+    fontWeight: "bold",
   },
   shoppingText: {
     fontSize: 16,

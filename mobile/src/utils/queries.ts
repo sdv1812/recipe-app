@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { Recipe, RecipeImport } from "../../../shared/types";
+import { Recipe, RecipeImport, GroceryItem } from "../../../shared/types";
 
 // Query Keys
 export const queryKeys = {
   recipes: ["recipes"] as const,
   recipe: (id: string) => ["recipes", id] as const,
   user: ["user"] as const,
+  groceries: ["groceries"] as const,
 };
 
 // Queries
@@ -98,6 +99,151 @@ export function useChatWithRecipe() {
         queryKey: queryKeys.recipe(variables.recipeId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.recipes });
+    },
+  });
+}
+
+// Grocery Queries
+export function useGroceries() {
+  return useQuery({
+    queryKey: queryKeys.groceries,
+    queryFn: () => api.getGroceries(),
+  });
+}
+
+export function useAddToGroceries() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      items,
+      recipeId,
+    }: {
+      items: Array<{ name: string; quantity?: string; unit?: string }>;
+      recipeId?: string;
+    }) => api.addToGroceries(items, recipeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
+    },
+  });
+}
+
+export function useToggleGroceryItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (itemId: string) => api.toggleGroceryItem(itemId),
+    // Optimistic update for instant UI feedback
+    onMutate: async (itemId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.groceries });
+
+      // Snapshot the previous value
+      const previousGroceries = queryClient.getQueryData<GroceryItem[]>(
+        queryKeys.groceries,
+      );
+
+      // Optimistically update the cache
+      queryClient.setQueryData<GroceryItem[]>(
+        queryKeys.groceries,
+        (old = []) => {
+          return old.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  completed: !item.completed,
+                  completedAt: !item.completed
+                    ? new Date().toISOString()
+                    : undefined,
+                }
+              : item,
+          );
+        },
+      );
+
+      // Return context with previous data for rollback
+      return { previousGroceries };
+    },
+    // Rollback on error
+    onError: (err, itemId, context) => {
+      if (context?.previousGroceries) {
+        queryClient.setQueryData(
+          queryKeys.groceries,
+          context.previousGroceries,
+        );
+      }
+    },
+    // Always refetch after error or success to sync with server
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
+    },
+  });
+}
+
+export function useDeleteGroceryItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (itemId: string) => api.deleteGroceryItem(itemId),
+    // Optimistic update for instant UI feedback
+    onMutate: async (itemId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.groceries });
+
+      const previousGroceries = queryClient.getQueryData<GroceryItem[]>(
+        queryKeys.groceries,
+      );
+
+      // Optimistically remove the item
+      queryClient.setQueryData<GroceryItem[]>(queryKeys.groceries, (old = []) =>
+        old.filter((item) => item.id !== itemId),
+      );
+
+      return { previousGroceries };
+    },
+    onError: (err, itemId, context) => {
+      if (context?.previousGroceries) {
+        queryClient.setQueryData(
+          queryKeys.groceries,
+          context.previousGroceries,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
+    },
+  });
+}
+
+export function useClearCompletedGroceries() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.clearCompletedGroceries(),
+    // Optimistic update for instant UI feedback
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.groceries });
+
+      const previousGroceries = queryClient.getQueryData<GroceryItem[]>(
+        queryKeys.groceries,
+      );
+
+      // Optimistically remove completed items
+      queryClient.setQueryData<GroceryItem[]>(queryKeys.groceries, (old = []) =>
+        old.filter((item) => !item.completed),
+      );
+
+      return { previousGroceries };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousGroceries) {
+        queryClient.setQueryData(
+          queryKeys.groceries,
+          context.previousGroceries,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
     },
   });
 }

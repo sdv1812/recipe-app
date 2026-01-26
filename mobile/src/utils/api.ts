@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   RecipeImport,
   Recipe,
+  GroceryItem,
   ChatWithRecipeRequest,
   ChatWithRecipeResponse,
   GenerateRecipeRequest,
@@ -296,5 +297,49 @@ export const api = {
     }
 
     return data.preferences || [];
+  },
+
+  /**
+   * Get grocery list
+   */
+  async getGroceries(): Promise<GroceryItem[]> {
+    const { data } = await apiClient.get("/groceries");
+    return data || [];
+  },
+
+  /**
+   * Add items to grocery list
+   */
+  async addToGroceries(
+    items: Array<{ name: string; quantity?: string; unit?: string }>,
+    recipeId?: string,
+  ): Promise<{ added: number; updated: number }> {
+    const { data } = await apiClient.post("/groceries/add", {
+      items,
+      recipeId,
+    });
+    return data;
+  },
+
+  /**
+   * Toggle grocery item completion
+   */
+  async toggleGroceryItem(itemId: string): Promise<GroceryItem> {
+    const { data } = await apiClient.put(`/groceries/${itemId}`);
+    return data;
+  },
+
+  /**
+   * Delete a grocery item
+   */
+  async deleteGroceryItem(itemId: string): Promise<void> {
+    await apiClient.delete(`/groceries/${itemId}`);
+  },
+
+  /**
+   * Clear completed grocery items
+   */
+  async clearCompletedGroceries(): Promise<void> {
+    await apiClient.delete("/groceries/clear-done");
   },
 };

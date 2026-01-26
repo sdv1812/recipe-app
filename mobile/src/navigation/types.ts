@@ -5,6 +5,7 @@ import { NavigatorScreenParams } from "@react-navigation/native";
 export type TabParamList = {
   MyRecipes: undefined;
   AIChef: undefined;
+  Groceries: undefined;
   More: undefined;
 };
 

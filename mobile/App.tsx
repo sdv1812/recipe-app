@@ -13,6 +13,7 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import PreferencesScreen from "./src/screens/PreferencesScreen";
 import SettingsDrawer from "./src/screens/SettingsDrawer";
 import ImportJsonScreen from "./src/screens/ImportJsonScreen";
+import GroceriesScreen from "./src/screens/GroceriesScreen";
 import { authStorage } from "./src/utils/storage";
 
 // Create a query client
@@ -69,6 +70,16 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
           tabBarLabel: "AI Chef",
           tabBarIcon: ({ color, size }) => (
             <Text style={{ fontSize: 24 }}>🤖</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Groceries"
+        component={GroceriesScreen}
+        options={{
+          tabBarLabel: "Groceries",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ fontSize: 24 }}>🛒</Text>
           ),
         }}
       />
