@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import {
   useGroceries,
   useToggleGroceryItem,
   useClearCompletedGroceries,
   useDeleteGroceryItem,
+  useAddToGroceries,
 } from "../utils/queries";
 import { GroceryItem } from "../../../shared/types";
 
@@ -21,6 +26,12 @@ export default function GroceriesScreen() {
   const toggleMutation = useToggleGroceryItem();
   const clearMutation = useClearCompletedGroceries();
   const deleteMutation = useDeleteGroceryItem();
+  const addMutation = useAddToGroceries();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [itemName, setItemName] = useState("");
+  const [itemQuantity, setItemQuantity] = useState("");
+  const [itemUnit, setItemUnit] = useState("");
 
   const pendingItems = groceries.filter((item) => !item.completed);
   const completedItems = groceries.filter((item) => item.completed);
@@ -55,6 +66,36 @@ export default function GroceriesScreen() {
         },
       ],
     );
+  };
+
+  const handleAddItem = async () => {
+    if (!itemName.trim()) {
+      Alert.alert("Error", "Please enter an item name");
+      return;
+    }
+
+    try {
+      await addMutation.mutateAsync({
+        items: [
+          {
+            name: itemName.trim(),
+            quantity: itemQuantity.trim() || undefined,
+            unit: itemUnit.trim() || undefined,
+          },
+        ],
+      });
+
+      // Reset form and close modal
+      setItemName("");
+      setItemQuantity("");
+      setItemUnit("");
+      setShowAddModal(false);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to add item",
+      );
+    }
   };
 
   const renderItem = ({
@@ -98,16 +139,24 @@ export default function GroceriesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Grocery List</Text>
-        {completedItems.length > 0 && (
+        <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={handleClearCompleted}
-            style={styles.clearButton}
+            onPress={() => setShowAddModal(true)}
+            style={styles.addButton}
           >
-            <Text style={styles.clearButtonText}>
-              Clear Done ({completedItems.length})
-            </Text>
+            <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
-        )}
+          {completedItems.length > 0 && (
+            <TouchableOpacity
+              onPress={handleClearCompleted}
+              style={styles.clearButton}
+            >
+              <Text style={styles.clearButtonText}>
+                Clear Done ({completedItems.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {pendingItems.length === 0 && completedItems.length === 0 ? (
@@ -115,7 +164,7 @@ export default function GroceriesScreen() {
           <Text style={styles.emptyIcon}>🛒</Text>
           <Text style={styles.emptyText}>Your grocery list is empty</Text>
           <Text style={styles.emptySubtext}>
-            Add items from recipe shopping lists
+            Add items from recipe shopping lists or manually
           </Text>
         </View>
       ) : (
@@ -148,6 +197,79 @@ export default function GroceriesScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Grocery Item</Text>
+                <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                  <Text style={styles.modalCloseButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Item Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Milk, Eggs, Bread"
+                  value={itemName}
+                  onChangeText={setItemName}
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputContainer, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Quantity</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="2"
+                    value={itemQuantity}
+                    onChangeText={setItemQuantity}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View
+                  style={[styles.inputContainer, { flex: 1, marginLeft: 12 }]}
+                >
+                  <Text style={styles.inputLabel}>Unit</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="lbs, kg, pcs"
+                    value={itemUnit}
+                    onChangeText={setItemUnit}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowAddModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleAddItem}
+                >
+                  <Text style={styles.saveButtonText}>Add Item</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -182,6 +304,22 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#333",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  addButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   clearButton: {
     paddingHorizontal: 12,
@@ -273,5 +411,85 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#bbb",
     textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  modalCloseButton: {
+    fontSize: 28,
+    color: "#666",
+    fontWeight: "300",
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#f9f9f9",
+  },
+  inputRow: {
+    flexDirection: "row",
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+  },
+  saveButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#4CAF50",
+    alignItems: "center",
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
   },
 });
