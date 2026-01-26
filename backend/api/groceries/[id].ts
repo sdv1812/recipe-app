@@ -1,6 +1,10 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth, unauthorizedResponse } from "../../lib/auth";
-import { toggleGroceryItem } from "../../lib/db";
+import {
+  toggleGroceryItem,
+  deleteGroceryItem,
+  clearCompletedGroceries,
+} from "../../lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Require authentication (validates both API key and JWT token)
@@ -11,10 +15,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { id } = req.query;
 
+  // Special route: DELETE /api/groceries/clear-done
+  if (req.method === "DELETE" && id === "clear-done") {
+    try {
+      await clearCompletedGroceries(userId);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error clearing completed groceries:", error);
+      return res.status(500).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to clear completed groceries",
+      });
+    }
+  }
+
   if (!id || typeof id !== "string") {
     return res.status(400).json({ error: "Item ID is required" });
   }
 
+  // PUT - Toggle grocery item completion
   if (req.method === "PUT") {
     try {
       const result = await toggleGroceryItem(userId, id);
@@ -30,9 +51,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // DELETE - Delete specific grocery item
   if (req.method === "DELETE") {
     try {
-      const { deleteGroceryItem } = await import("../../lib/db");
       await deleteGroceryItem(userId, id);
       return res.status(200).json({ success: true });
     } catch (error) {
