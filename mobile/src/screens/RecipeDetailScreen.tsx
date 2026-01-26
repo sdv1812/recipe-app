@@ -107,9 +107,10 @@ export default function RecipeDetailScreen() {
     if (!recipe) return;
 
     try {
-      const updatedRecipe = { ...recipe, isFavorite: !recipe.isFavorite };
-      await api.updateRecipe(recipe.id, updatedRecipe);
-      setRecipe(updatedRecipe);
+      await updateMutation.mutateAsync({
+        recipeId: recipe.id,
+        updates: { isFavorite: !recipe.isFavorite },
+      });
     } catch (error) {
       Alert.alert(
         "Error",
