@@ -4,9 +4,9 @@ import { ObjectId } from "mongodb";
 export interface UserDocument {
   _id?: ObjectId;
   email: string;
-  password: string;
+  passwordHash: string;
   name?: string;
   preferences?: string[]; // User food preferences (e.g., "no spicy food", "vegetarian", "gluten-free")
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

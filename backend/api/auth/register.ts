@@ -62,10 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Create user
     const result = await users.insertOne({
       email: email.toLowerCase(),
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       name: name || email.split("@")[0],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     const userId = result.insertedId.toString();

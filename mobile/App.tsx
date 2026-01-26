@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootStackParamList, TabParamList } from "./src/navigation/types";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -15,6 +16,7 @@ import SettingsDrawer from "./src/screens/SettingsDrawer";
 import ImportJsonScreen from "./src/screens/ImportJsonScreen";
 import GroceriesScreen from "./src/screens/GroceriesScreen";
 import { authStorage } from "./src/utils/storage";
+import { Colors } from "./src/constants/design";
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -37,7 +39,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#007AFF",
+        tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: "#8E8E93",
         tabBarStyle: {
           borderTopWidth: 1,
@@ -57,7 +59,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
         options={{
           tabBarLabel: "My Recipes",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>📚</Text>
+            <Ionicons name="book-outline" size={size} color={color} />
           ),
         }}
       >
@@ -69,7 +71,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
         options={{
           tabBarLabel: "AI Chef",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>🤖</Text>
+            <Ionicons name="sparkles-outline" size={size} color={color} />
           ),
         }}
       />
@@ -79,7 +81,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
         options={{
           tabBarLabel: "Groceries",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>🛒</Text>
+            <Ionicons name="cart-outline" size={size} color={color} />
           ),
         }}
       />
@@ -89,7 +91,7 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
         options={{
           tabBarLabel: "More",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 24 }}>☰</Text>
+            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
           ),
         }}
         listeners={({ navigation }) => ({

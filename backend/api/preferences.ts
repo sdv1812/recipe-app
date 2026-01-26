@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { _id: new ObjectId(userId) },
         {
           $addToSet: { preferences: preference.trim() }, // addToSet prevents duplicates
-          $set: { updatedAt: new Date().toISOString() },
+          $set: { updatedAt: new Date() },
         },
       );
 
@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { _id: new ObjectId(userId) },
         {
           $pull: { preferences: preference },
-          $set: { updatedAt: new Date().toISOString() },
+          $set: { updatedAt: new Date() },
         },
       );
 

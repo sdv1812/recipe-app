@@ -7,6 +7,8 @@ import {
   ScrollView,
   Modal,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { RecipeImport } from "../../../shared/types";
 
 type RecipePreviewModalProps = {
@@ -33,7 +35,7 @@ export default function RecipePreviewModal({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onDiscard} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={28} color={Colors.text.secondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recipe Preview</Text>
           <View style={{ width: 40 }} />
@@ -51,13 +53,23 @@ export default function RecipePreviewModal({
           <View style={styles.metaContainer}>
             {recipe.servings && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🍽️</Text>
+                <Ionicons
+                  name="restaurant-outline"
+                  size={16}
+                  color={Colors.text.secondary}
+                  style={styles.metaIcon}
+                />
                 <Text style={styles.metaText}>{recipe.servings} servings</Text>
               </View>
             )}
             {recipe.prepTimeMinutes && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>⏱️</Text>
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={Colors.text.secondary}
+                  style={styles.metaIcon}
+                />
                 <Text style={styles.metaText}>
                   {recipe.prepTimeMinutes} min prep
                 </Text>
@@ -65,7 +77,12 @@ export default function RecipePreviewModal({
             )}
             {recipe.cookTimeMinutes && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🔥</Text>
+                <Ionicons
+                  name="flame-outline"
+                  size={16}
+                  color={Colors.text.secondary}
+                  style={styles.metaIcon}
+                />
                 <Text style={styles.metaText}>
                   {recipe.cookTimeMinutes} min cook
                 </Text>
@@ -147,8 +164,14 @@ export default function RecipePreviewModal({
         {/* Action Buttons */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.discardButton} onPress={onDiscard}>
-            <Text style={styles.discardButtonText}>
-              ✕ Discard & Ask for Changes
+            <Ionicons
+              name="close"
+              size={18}
+              color={Colors.error}
+              style={{ marginRight: Spacing.xs }}
+            />
+            <Text style={styles.discardButtonText} numberOfLines={1}>
+              Ask for Changes
             </Text>
           </TouchableOpacity>
 
@@ -156,7 +179,15 @@ export default function RecipePreviewModal({
             style={styles.saveButton}
             onPress={() => onSave(recipe)}
           >
-            <Text style={styles.saveButtonText}>✓ Save to My Recipes</Text>
+            <Ionicons
+              name="checkmark"
+              size={18}
+              color={Colors.card}
+              style={{ marginRight: Spacing.xs }}
+            />
+            <Text style={styles.saveButtonText} numberOfLines={1}>
+              Save Recipe
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -167,175 +198,183 @@ export default function RecipePreviewModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: Spacing.base,
     paddingTop: 60,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   closeButton: {
-    padding: 8,
-  },
-  closeText: {
-    fontSize: 24,
-    color: "#666",
+    padding: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: Spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    fontSize: Typography.size["3xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   description: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 20,
-    lineHeight: 22,
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.lg,
+    lineHeight: Typography.size.base * Typography.lineHeight.normal,
   },
   metaContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 20,
+    gap: Spacing.base,
+    marginBottom: Spacing.lg,
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
   },
   metaIcon: {
-    fontSize: 16,
-    marginRight: 6,
+    marginRight: Spacing.xs,
   },
   metaText: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   chipsContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   sectionLabel: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.semibold,
+    marginBottom: Spacing.sm,
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   chipsWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: Spacing.sm,
   },
   categoryChip: {
-    backgroundColor: "#E8F5E9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   categoryChipText: {
-    fontSize: 12,
-    color: "#2E7D32",
-    fontWeight: "600",
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.medium,
   },
   tagChip: {
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tagChipText: {
-    fontSize: 12,
-    color: "#1565C0",
-    fontWeight: "500",
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.medium,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   ingredientItem: {
     flexDirection: "row",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   bullet: {
-    fontSize: 16,
-    color: "#007AFF",
-    marginRight: 8,
-    fontWeight: "bold",
+    fontSize: Typography.size.base,
+    color: Colors.primary,
+    marginRight: Spacing.sm,
+    fontWeight: Typography.weight.bold,
   },
   ingredientText: {
-    fontSize: 15,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     flex: 1,
   },
   stepItem: {
     flexDirection: "row",
-    marginBottom: 16,
+    marginBottom: Spacing.base,
   },
   stepNumber: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#007AFF",
-    marginRight: 8,
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.bold,
+    color: Colors.primary,
+    marginRight: Spacing.sm,
     minWidth: 24,
   },
   stepText: {
-    fontSize: 15,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: Typography.size.base * Typography.lineHeight.normal,
   },
   footer: {
     flexDirection: "row",
-    padding: 16,
-    gap: 12,
-    backgroundColor: "#fff",
+    padding: Spacing.base,
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
     borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingBottom: 32,
+    borderTopColor: Colors.border,
+    paddingBottom: Spacing["2xl"],
   },
   discardButton: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#FF3B30",
+    backgroundColor: Colors.card,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.error,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
   discardButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#FF3B30",
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.error,
+    flexShrink: 1,
   },
   saveButton: {
     flex: 1,
-    backgroundColor: "#4CAF50",
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
   saveButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.card,
+    flexShrink: 1,
   },
 });

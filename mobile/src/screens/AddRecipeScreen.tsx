@@ -8,6 +8,7 @@ import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
 import { useCreateRecipe } from "../utils/queries";
 import { api } from "../utils/api";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 
 type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -26,7 +27,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "assistant",
   content:
-    '👋 Hi! I\'m your AI Chef assistant. Tell me what you\'d like to cook today!\n\nYou can say things like:\n• "I want a healthy dinner recipe"\n• "Something quick with chicken"\n• "Vegetarian pasta under 30 minutes"\n• "Dessert for 4 people"',
+    "Hi! I'm here to help you create delicious recipes. Tell me what you'd like to cook!\n\nYou can say things like:\n• I want a healthy dinner recipe\n• Something quick with chicken\n• Vegetarian pasta under 30 minutes\n• Dessert for 4 people",
   timestamp: new Date().toISOString(),
 };
 
@@ -63,7 +64,7 @@ export default function AddRecipeScreen() {
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Great! I've created a recipe for you: **${recipeData.title}**\n\nTap the card below to preview it. You can save it to your library or ask me to modify it!`,
+        content: `Great! I've created a recipe for you: ${recipeData.title}\n\nTap the card below to preview it. You can save it to your library or ask me to modify it!`,
         timestamp: new Date().toISOString(),
         recipe: recipeData,
       };
@@ -94,7 +95,7 @@ export default function AddRecipeScreen() {
       const confirmMessage: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
-        content: `✅ Perfect! "${recipe.title}" has been saved to your library. Would you like to create another recipe?`,
+        content: `Perfect! "${recipe.title}" has been saved to your library. Would you like to create another recipe?`,
         timestamp: new Date().toISOString(),
       };
 
@@ -132,40 +133,44 @@ export default function AddRecipeScreen() {
   const renderRecipeCard = (message: ChatMessage) => {
     if (!message.recipe) return null;
 
+    const totalTime =
+      (message.recipe.prepTimeMinutes || 0) +
+      (message.recipe.cookTimeMinutes || 0);
+
     return (
       <TouchableOpacity
         style={styles.recipeCard}
         onPress={() => handlePreviewRecipe(message.recipe!)}
+        activeOpacity={0.7}
       >
-        <View style={styles.recipeCardHeader}>
-          <Text style={styles.recipeCardTitle}>{message.recipe.title}</Text>
-          <Text style={styles.recipeCardIcon}>👉</Text>
-        </View>
-
-        {message.recipe.description && (
-          <Text style={styles.recipeCardDescription} numberOfLines={2}>
-            {message.recipe.description}
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {message.recipe.title}
           </Text>
-        )}
 
-        <View style={styles.recipeCardMeta}>
-          {message.recipe.servings && (
-            <Text style={styles.recipeCardMetaItem}>
-              🍽️ {message.recipe.servings} servings
+          {message.recipe.description && (
+            <Text style={styles.cardDescription} numberOfLines={2}>
+              {message.recipe.description}
             </Text>
           )}
-          {message.recipe.prepTimeMinutes && (
-            <Text style={styles.recipeCardMetaItem}>
-              ⏱️{" "}
-              {message.recipe.prepTimeMinutes +
-                (message.recipe.cookTimeMinutes || 0)}{" "}
-              min
-            </Text>
-          )}
-        </View>
 
-        <View style={styles.recipeCardFooter}>
-          <Text style={styles.recipeCardCTA}>Tap to preview and save →</Text>
+          <View style={styles.cardMeta}>
+            {message.recipe.servings && (
+              <Text style={styles.metaText}>
+                {message.recipe.servings} servings
+              </Text>
+            )}
+            {totalTime > 0 && (
+              <>
+                <Text style={styles.metaDivider}>•</Text>
+                <Text style={styles.metaText}>{totalTime} min</Text>
+              </>
+            )}
+          </View>
+
+          <View style={styles.cardAction}>
+            <Text style={styles.actionText}>Tap to review</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -177,9 +182,9 @@ export default function AddRecipeScreen() {
         chatHistory={chatHistory}
         userMessage={userMessage}
         isGenerating={isGenerating}
-        placeholder="Ask for a recipe..."
-        headerTitle="🤖 AI Chef"
-        headerSubtitle="Chat to create your perfect recipe"
+        placeholder="Describe the recipe you'd like..."
+        headerTitle="AI Chef"
+        headerSubtitle="Create recipes with AI"
         onMessageChange={setUserMessage}
         onSendMessage={handleSendMessage}
         renderMessageExtras={renderRecipeCard}
@@ -200,57 +205,55 @@ export default function AddRecipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   recipeCard: {
-    marginTop: 12,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: "#007AFF",
+    marginTop: Spacing.md,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    overflow: "hidden",
   },
-  recipeCardHeader: {
+  cardContent: {
+    padding: Spacing.base,
+  },
+  cardTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+    lineHeight: Typography.size.lg * Typography.lineHeight.tight,
+  },
+  cardDescription: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+    lineHeight: Typography.size.sm * Typography.lineHeight.normal,
+  },
+  cardMeta: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  recipeCardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    flex: 1,
+  metaText: {
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
   },
-  recipeCardIcon: {
-    fontSize: 20,
-    marginLeft: 8,
+  metaDivider: {
+    fontSize: Typography.size.xs,
+    color: Colors.border,
+    marginHorizontal: Spacing.sm,
   },
-  recipeCardDescription: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 8,
-    lineHeight: 18,
-  },
-  recipeCardMeta: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 8,
-  },
-  recipeCardMetaItem: {
-    fontSize: 12,
-    color: "#666",
-  },
-  recipeCardFooter: {
+  cardAction: {
+    paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingTop: 8,
-    marginTop: 4,
+    borderTopColor: Colors.border,
   },
-  recipeCardCTA: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#007AFF",
+  actionText: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+    color: Colors.primary,
     textAlign: "center",
   },
 });

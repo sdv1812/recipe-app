@@ -25,6 +25,14 @@ db.createCollection('users', {
         createdAt: {
           bsonType: 'date',
           description: 'must be a date and is required'
+        },
+        updatedAt: {
+          bsonType: 'date',
+          description: 'must be a date if the field exists'
+        },
+        preferences: {
+          bsonType: 'array',
+          description: 'must be an array if the field exists'
         }
       }
     }

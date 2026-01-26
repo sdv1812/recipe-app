@@ -3,15 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Modal,
   TextInput,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
+import Loader from "../components/Loader";
 import {
   useGroceries,
   useToggleGroceryItem,
@@ -98,23 +99,17 @@ export default function GroceriesScreen() {
     }
   };
 
-  const renderItem = ({
-    item,
-    completed,
-  }: {
-    item: GroceryItem;
-    completed: boolean;
-  }) => (
+  const renderItem = ({ item }: { item: GroceryItem }) => (
     <TouchableOpacity
       style={styles.groceryItem}
       onPress={() => handleToggle(item.id)}
       onLongPress={() => handleDelete(item.id, item.name)}
     >
       <View style={styles.checkbox}>
-        <Text style={styles.checkboxText}>{completed ? "✓" : ""}</Text>
+        <Text style={styles.checkboxText}>{item.completed ? "✓" : ""}</Text>
       </View>
       <View style={styles.itemContent}>
-        <Text style={[styles.itemName, completed && styles.completedText]}>
+        <Text style={[styles.itemName, item.completed && styles.completedText]}>
           {item.name}
         </Text>
         {item.quantity && (
@@ -127,12 +122,7 @@ export default function GroceriesScreen() {
   );
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading groceries...</Text>
-      </View>
-    );
+    return <Loader text="Loading groceries..." />;
   }
 
   return (
@@ -161,41 +151,44 @@ export default function GroceriesScreen() {
 
       {pendingItems.length === 0 && completedItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🛒</Text>
           <Text style={styles.emptyText}>Your grocery list is empty</Text>
           <Text style={styles.emptySubtext}>
             Add items from recipe shopping lists or manually
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={[...pendingItems, ...completedItems]}
-          renderItem={({ item }) =>
-            renderItem({ item, completed: item.completed })
-          }
-          keyExtractor={(item) => item.id}
+        <ScrollView
+          style={styles.scrollContainer}
           contentContainerStyle={styles.listContainer}
-          ListHeaderComponent={
-            pendingItems.length > 0 && completedItems.length > 0 ? (
+        >
+          {/* Pending Section */}
+          {pendingItems.length > 0 && (
+            <View>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
                   Pending ({pendingItems.length})
                 </Text>
               </View>
-            ) : null
-          }
-          ListFooterComponent={
-            completedItems.length > 0 ? (
-              <>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>
-                    Completed ({completedItems.length})
-                  </Text>
-                </View>
-              </>
-            ) : null
-          }
-        />
+              {pendingItems.map((item) => (
+                <View key={item.id}>{renderItem({ item })}</View>
+              ))}
+            </View>
+          )}
+
+          {/* Completed Section */}
+          {completedItems.length > 0 && (
+            <View>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Completed ({completedItems.length})
+                </Text>
+              </View>
+              {completedItems.map((item) => (
+                <View key={item.id}>{renderItem({ item })}</View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
 
       <Modal
@@ -213,7 +206,7 @@ export default function GroceriesScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Add Grocery Item</Text>
                 <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                  <Text style={styles.modalCloseButton}>✕</Text>
+                  <Text style={styles.modalCloseButton}>Close</Text>
                 </TouchableOpacity>
               </View>
 
@@ -277,140 +270,135 @@ export default function GroceriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#666",
+    backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size["3xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.sm,
   },
   addButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#4CAF50",
-    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    minHeight: 32,
+    justifyContent: "center",
   },
   addButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    color: Colors.card,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
   },
   clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#FF3B30",
-    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: "transparent",
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    minHeight: 32,
+    justifyContent: "center",
   },
   clearButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
+    color: Colors.error,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   listContainer: {
-    padding: 16,
+    padding: Spacing.md,
   },
   sectionHeader: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#999",
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   groceryItem: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: BorderRadius.full,
     borderWidth: 2,
-    borderColor: "#4CAF50",
-    backgroundColor: "#fff",
-    marginRight: 12,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.card,
+    marginRight: Spacing.md,
     justifyContent: "center",
     alignItems: "center",
   },
   checkboxText: {
-    fontSize: 14,
-    color: "#4CAF50",
-    fontWeight: "bold",
+    fontSize: Typography.size.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weight.bold,
   },
   itemContent: {
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 4,
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   itemQuantity: {
-    fontSize: 13,
-    color: "#999",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   completedText: {
     textDecorationLine: "line-through",
-    color: "#999",
+    color: Colors.text.secondary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    paddingHorizontal: Spacing["3xl"],
   },
   emptyText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#999",
-    marginBottom: 8,
+    fontSize: Typography.size["2xl"],
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
   },
   emptySubtext: {
-    fontSize: 16,
-    color: "#bbb",
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
     textAlign: "center",
+    opacity: 0.7,
   },
   modalOverlay: {
     flex: 1,
@@ -418,78 +406,79 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 40,
+    backgroundColor: Colors.card,
+    borderTopLeftRadius: BorderRadius["2xl"],
+    borderTopRightRadius: BorderRadius["2xl"],
+    paddingBottom: Spacing["3xl"],
   },
   modalContent: {
-    padding: 20,
+    padding: Spacing.lg,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size["2xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   modalCloseButton: {
-    fontSize: 28,
-    color: "#666",
-    fontWeight: "300",
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.semibold,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 8,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: Typography.size.base,
+    backgroundColor: Colors.background,
+    color: Colors.text.primary,
   },
   inputRow: {
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   modalActions: {
     flexDirection: "row",
-    gap: 12,
+    gap: Spacing.md,
   },
   cancelButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
     alignItems: "center",
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
   },
   saveButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#4CAF50",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
     alignItems: "center",
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.card,
   },
 });

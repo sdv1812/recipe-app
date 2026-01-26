@@ -6,9 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Modal,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -17,6 +18,8 @@ import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
+import Tag from "../components/Tag";
+import Loader from "../components/Loader";
 import {
   useRecipe,
   useUpdateRecipe,
@@ -41,7 +44,7 @@ const WELCOME_MESSAGE: ChatMessageWithRecipe = {
   id: "welcome",
   role: "assistant",
   content:
-    '👋 Hi! I\'m here to help you modify this recipe.\n\nYou can ask me to:\n• "Make it less spicy"\n• "Add more vegetables"\n• "Make it vegan"\n• "Reduce cooking time"\n\nTap the recipe card below to see the current version!',
+    'Hi! I\'m here to help you modify this recipe.\n\nYou can ask me to:\n• "Make it less spicy"\n• "Add more vegetables"\n• "Make it vegan"\n• "Reduce cooking time"\n\nTap the recipe card below to see the current version!',
   timestamp: new Date().toISOString(),
 };
 
@@ -165,7 +168,7 @@ export default function RecipeDetailScreen() {
       // Check if a new preference was detected
       if (response.preferenceAdded) {
         Alert.alert(
-          "✨ Preference Saved",
+          "Preference Saved",
           `I noticed you prefer "${response.preferenceAdded}". I've saved this to your preferences so all future recipes will follow this!`,
           [
             {
@@ -365,15 +368,16 @@ export default function RecipeDetailScreen() {
   const renderRecipeCard = (message: ChatMessageWithRecipe) => {
     if (!message.recipe) return null;
 
+    const totalTime =
+      (message.recipe.prepTimeMinutes || 0) +
+      (message.recipe.cookTimeMinutes || 0);
+
     return (
       <TouchableOpacity
         style={styles.recipeCard}
         onPress={() => handlePreviewRecipe(message.recipe!)}
       >
-        <View style={styles.recipeCardHeader}>
-          <Text style={styles.recipeCardTitle}>{message.recipe.title}</Text>
-          <Text style={styles.recipeCardIcon}>👉</Text>
-        </View>
+        <Text style={styles.recipeCardTitle}>{message.recipe.title}</Text>
 
         {message.recipe.description && (
           <Text style={styles.recipeCardDescription} numberOfLines={2}>
@@ -384,33 +388,22 @@ export default function RecipeDetailScreen() {
         <View style={styles.recipeCardMeta}>
           {message.recipe.servings && (
             <Text style={styles.recipeCardMetaItem}>
-              🍽️ {message.recipe.servings} servings
+              {message.recipe.servings} servings
             </Text>
           )}
-          {message.recipe.prepTimeMinutes && (
-            <Text style={styles.recipeCardMetaItem}>
-              ⏱️{" "}
-              {message.recipe.prepTimeMinutes +
-                (message.recipe.cookTimeMinutes || 0)}{" "}
-              min
-            </Text>
+          {totalTime > 0 && <Text style={styles.recipeCardMetaItem}>•</Text>}
+          {totalTime > 0 && (
+            <Text style={styles.recipeCardMetaItem}>{totalTime} min</Text>
           )}
         </View>
 
-        <View style={styles.recipeCardFooter}>
-          <Text style={styles.recipeCardCTA}>Tap to preview →</Text>
-        </View>
+        <Text style={styles.recipeCardCTA}>Tap to review</Text>
       </TouchableOpacity>
     );
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading recipe...</Text>
-      </View>
-    );
+    return <Loader text="Loading recipe..." />;
   }
 
   if (!recipe) {
@@ -430,25 +423,33 @@ export default function RecipeDetailScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.aiButton}
             onPress={() => setShowChatModal(true)}
           >
-            <Text style={styles.aiButtonText}>🤖 AI</Text>
+            <Ionicons
+              name="sparkles-outline"
+              size={16}
+              color={Colors.primary}
+            />
+            <Text style={styles.aiButtonText}>Edit with AI</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.favoriteButton}
+            style={styles.iconButton}
             onPress={handleToggleFavorite}
           >
-            <Text style={styles.favoriteButtonText}>
-              {recipe.isFavorite ? "❤️" : "🤍"}
-            </Text>
+            <Ionicons
+              name={recipe.isFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={recipe.isFavorite ? Colors.primary : Colors.text.secondary}
+            />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-            <Text style={styles.shareButtonText}>📤</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+            <Ionicons name="share-outline" size={22} color={Colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -461,22 +462,15 @@ export default function RecipeDetailScreen() {
           )}
 
           <View style={styles.metaInfo}>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>🍽️</Text>
-              <Text style={styles.metaText}>{recipe.servings} servings</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>⏱️</Text>
-              <Text style={styles.metaText}>{formatTimeBreakdown()}</Text>
-            </View>
+            <Text style={styles.metaText}>{recipe.servings} servings</Text>
+            <Text style={styles.metaSeparator}>•</Text>
+            <Text style={styles.metaText}>{formatTimeBreakdown()}</Text>
           </View>
 
           {recipe.category && recipe.category.length > 0 && (
             <View style={styles.categoryContainer}>
               {recipe.category.map((cat, index) => (
-                <View key={index} style={styles.categoryChip}>
-                  <Text style={styles.categoryText}>{cat}</Text>
-                </View>
+                <Tag key={index} text={cat} />
               ))}
             </View>
           )}
@@ -617,7 +611,7 @@ export default function RecipeDetailScreen() {
                       </Text>
                       {step.duration && (
                         <Text style={styles.stepDuration}>
-                          ⏱️ {step.duration}m
+                          {step.duration}m
                         </Text>
                       )}
                     </View>
@@ -660,7 +654,7 @@ export default function RecipeDetailScreen() {
                     onPress={handleAddToGroceries}
                   >
                     <Text style={styles.addToGroceriesButtonText}>
-                      🛒 Add to Groceries
+                      Add to Groceries
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -700,11 +694,17 @@ export default function RecipeDetailScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderContent}>
+              <Text style={styles.modalHeaderTitle}>Edit: {recipe.title}</Text>
+              <Text style={styles.modalHeaderSubtitle}>
+                Ask AI to modify your recipe
+              </Text>
+            </View>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowChatModal(false)}
             >
-              <Text style={styles.modalCloseText}>✕ Close</Text>
+              <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
@@ -713,8 +713,6 @@ export default function RecipeDetailScreen() {
             userMessage={chatMessage}
             isGenerating={isChatting}
             placeholder="Ask AI to modify your recipe..."
-            headerTitle={`🤖 Edit: ${recipe.title}`}
-            headerSubtitle="Ask AI to modify your recipe"
             onMessageChange={setChatMessage}
             onSendMessage={handleSendMessage}
             renderMessageExtras={renderRecipeCard}
@@ -737,213 +735,213 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#666",
+    marginTop: Spacing.sm,
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
   },
   header: {
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   backButton: {
-    padding: 8,
+    padding: Spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: "#4CAF50",
-    fontWeight: "600",
+    fontSize: Typography.size.base,
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.sm,
   },
   aiButton: {
-    padding: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: "transparent",
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
   },
   aiButtonText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "600",
+    fontSize: Typography.size.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
-  favoriteButton: {
-    padding: 8,
+  iconButton: {
+    padding: Spacing.xs,
   },
-  favoriteButtonText: {
-    fontSize: 24,
+  favoriteIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: BorderRadius.full,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.card,
   },
-  shareButton: {
-    padding: 8,
-    paddingHorizontal: 12,
+  favoriteIconActive: {
+    backgroundColor: Colors.primary,
   },
   shareButtonText: {
-    fontSize: 20,
+    fontSize: Typography.size.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
   content: {
     flex: 1,
   },
   recipeHeader: {
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   recipeTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
+    fontSize: Typography.size["3xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   recipeDescription: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
     lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   metaInfo: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 12,
-  },
-  metaItem: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  metaIcon: {
-    fontSize: 18,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   metaText: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+  },
+  metaSeparator: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   categoryContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginTop: 8,
-  },
-  categoryChip: {
-    backgroundColor: "#E8F5E9",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    fontSize: 11,
-    color: "#2E7D32",
-    fontWeight: "600",
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   tagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
   tag: {
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
   tagText: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.medium,
   },
   tabs: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: "#4CAF50",
+    borderBottomColor: Colors.primary,
   },
   tabText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.medium,
   },
   activeTabText: {
-    color: "#4CAF50",
-    fontWeight: "600",
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
   tabContent: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     minHeight: 400,
   },
   ingredientsContainer: {
-    padding: 20,
+    padding: Spacing.lg,
   },
   ingredientItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   ingredientBullet: {
-    fontSize: 16,
-    color: "#4CAF50",
-    marginRight: 12,
+    fontSize: Typography.size.base,
+    color: Colors.primary,
+    marginRight: Spacing.md,
     marginTop: 2,
   },
   ingredientText: {
-    fontSize: 16,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     flex: 1,
     lineHeight: 24,
   },
   stepsContainer: {
-    padding: 20,
+    padding: Spacing.lg,
   },
   stepItem: {
     flexDirection: "row",
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
+    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   stepCheckbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: BorderRadius.full,
     borderWidth: 2,
-    borderColor: "#4CAF50",
-    marginRight: 12,
+    borderColor: Colors.primary,
+    marginRight: Spacing.md,
     justifyContent: "center",
     alignItems: "center",
   },
   stepCheckboxText: {
-    fontSize: 14,
-    color: "#4CAF50",
-    fontWeight: "bold",
+    fontSize: Typography.size.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weight.bold,
   },
   stepContent: {
     flex: 1,
@@ -952,171 +950,170 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   stepNumber: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "600",
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.semibold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   stepDuration: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.medium,
   },
   stepText: {
-    fontSize: 15,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     lineHeight: 22,
   },
   completedStepText: {
     textDecorationLine: "line-through",
-    color: "#999",
+    color: Colors.text.secondary,
   },
   shoppingContainer: {
-    padding: 20,
+    padding: Spacing.lg,
   },
   shoppingHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: "#fff",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+    backgroundColor: Colors.card,
   },
   selectionControls: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   selectionButton: {
-    fontSize: 14,
-    color: "#007AFF",
-    fontWeight: "600",
+    fontSize: Typography.size.sm,
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
   selectedCount: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   addToGroceriesButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   addToGroceriesButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
+    fontSize: Typography.size.base,
+    color: Colors.card,
+    fontWeight: Typography.weight.semibold,
   },
   shoppingItemWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.md,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: BorderRadius.sm,
     borderWidth: 2,
-    borderColor: "#007AFF",
+    borderColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   checkboxSelected: {
-    backgroundColor: "#007AFF",
+    backgroundColor: Colors.primary,
   },
   checkboxText: {
-    fontSize: 12,
-    color: "#fff",
-    fontWeight: "bold",
+    fontSize: Typography.size.xs,
+    color: Colors.card,
+    fontWeight: Typography.weight.bold,
   },
   shoppingText: {
-    fontSize: 16,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     flex: 1,
   },
   purchasedText: {
     textDecorationLine: "line-through",
-    color: "#999",
+    color: Colors.text.secondary,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   modalHeader: {
-    backgroundColor: "#fff",
-    padding: 16,
+    backgroundColor: Colors.card,
+    padding: Spacing.md,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  modalCloseButton: {
-    padding: 8,
-  },
-  modalCloseText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "600",
-  },
-  recipeCard: {
-    marginTop: 12,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: "#007AFF",
-  },
-  recipeCardHeader: {
+    borderBottomColor: Colors.border,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+  },
+  modalHeaderContent: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  modalHeaderTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  modalHeaderSubtitle: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+  },
+  modalCloseButton: {
+    padding: Spacing.xs,
+  },
+  recipeCard: {
+    marginTop: Spacing.md,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
   },
   recipeCardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    flex: 1,
-  },
-  recipeCardIcon: {
-    fontSize: 20,
-    marginLeft: 8,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   recipeCardDescription: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 8,
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
     lineHeight: 18,
   },
   recipeCardMeta: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 8,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+    alignItems: "center",
   },
   recipeCardMetaItem: {
-    fontSize: 12,
-    color: "#666",
-  },
-  recipeCardFooter: {
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingTop: 8,
-    marginTop: 4,
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
   },
   recipeCardCTA: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#007AFF",
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.primary,
     textAlign: "center",
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
 });

@@ -11,12 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
 import { RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 
 type ImportJsonScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -80,7 +82,7 @@ export default function ImportJsonScreen() {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="chevron-back" size={28} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Import Recipe JSON</Text>
         <View style={{ width: 40 }} />
@@ -109,7 +111,7 @@ export default function ImportJsonScreen() {
                 style={styles.clearButton}
                 onPress={() => setJsonText("")}
               >
-                <Text style={styles.clearIcon}>✕</Text>
+                <Text style={styles.clearText}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -125,10 +127,7 @@ export default function ImportJsonScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <>
-                <Text style={styles.importIcon}>✅</Text>
-                <Text style={styles.importButtonText}>Import Recipe</Text>
-              </>
+              <Text style={styles.importButtonText}>Import Recipe</Text>
             )}
           </TouchableOpacity>
 
@@ -173,120 +172,114 @@ export default function ImportJsonScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   backButton: {
-    padding: 8,
+    padding: Spacing.xs,
   },
   backIcon: {
-    fontSize: 24,
-    color: "#007AFF",
+    fontSize: Typography.size["2xl"],
+    color: Colors.primary,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   keyboardView: {
     flex: 1,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: Spacing.lg,
   },
   instructionText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 24,
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xl,
     lineHeight: 22,
   },
   inputWrapper: {
     position: "relative",
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   jsonInput: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    paddingRight: 48,
-    fontSize: 14,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    paddingRight: 72,
+    fontSize: Typography.size.sm,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     minHeight: 200,
     maxHeight: 300,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
+    color: Colors.text.primary,
   },
   clearButton: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#e0e0e0",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    top: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: Colors.border,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
-  clearIcon: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "bold",
+  clearText: {
+    color: Colors.text.secondary,
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
   },
   importButton: {
-    backgroundColor: "#4CAF50",
-    padding: 18,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
     alignItems: "center",
-    flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 32,
+    marginBottom: Spacing["2xl"],
   },
   importButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  importIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    backgroundColor: Colors.border,
   },
   importButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    color: Colors.card,
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
   },
   exampleContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   exampleTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   exampleBox: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   exampleCode: {
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    fontSize: 12,
-    color: "#333",
+    fontSize: Typography.size.xs,
+    color: Colors.text.primary,
     lineHeight: 18,
   },
 });

@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 
 interface ChatMessage {
   id: string;
@@ -127,9 +129,11 @@ export default function ChatInterface({
           onPress={onSendMessage}
           disabled={!userMessage.trim() || isGenerating}
         >
-          <Text style={styles.sendButtonText}>
-            {isGenerating ? "..." : "→"}
-          </Text>
+          {isGenerating ? (
+            <ActivityIndicator size="small" color={Colors.card} />
+          ) : (
+            <Ionicons name="send" size={20} color={Colors.card} />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -139,119 +143,116 @@ export default function ChatInterface({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: Spacing.base,
+    paddingHorizontal: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
+    fontSize: Typography.size["2xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   chatContainer: {
     flex: 1,
   },
   chatContent: {
-    padding: 16,
+    padding: Spacing.base,
   },
   messageContainer: {
-    marginBottom: 16,
+    marginBottom: Spacing.base,
   },
   messageBubble: {
     maxWidth: "80%",
-    padding: 12,
-    borderRadius: 16,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
   },
   userBubble: {
-    backgroundColor: "#007AFF",
+    backgroundColor: Colors.primary,
     alignSelf: "flex-end",
   },
   assistantBubble: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   messageText: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 20,
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
+    lineHeight: Typography.size.base * Typography.lineHeight.normal,
   },
   userMessageText: {
-    color: "#fff",
+    color: Colors.card,
   },
   timestamp: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 4,
-    marginLeft: 8,
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+    marginLeft: Spacing.sm,
   },
   userTimestamp: {
     textAlign: "right",
-    marginRight: 8,
+    marginRight: Spacing.sm,
     marginLeft: 0,
   },
   typingContainer: {
-    marginBottom: 16,
+    marginBottom: Spacing.base,
   },
   typingBubble: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     alignSelf: "flex-start",
-    padding: 12,
-    borderRadius: 16,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   typingText: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 8,
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    marginLeft: Spacing.sm,
   },
   inputContainer: {
     flexDirection: "row",
-    padding: 16,
-    backgroundColor: "#fff",
+    padding: Spacing.base,
+    backgroundColor: Colors.card,
     borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingBottom: 32,
+    borderTopColor: Colors.border,
+    paddingBottom: Spacing["2xl"],
   },
   input: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    fontSize: Typography.size.base,
     maxHeight: 100,
-    marginRight: 8,
+    marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   sendButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: Colors.primary,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: BorderRadius.full,
     justifyContent: "center",
     alignItems: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  sendButtonText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "600",
+    backgroundColor: Colors.border,
   },
 });

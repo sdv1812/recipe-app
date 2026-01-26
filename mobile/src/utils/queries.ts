@@ -58,8 +58,53 @@ export function useUpdateRecipe() {
       recipeId: string;
       updates: Partial<Recipe>;
     }) => api.updateRecipe(recipeId, updates),
-    onSuccess: (_, variables) => {
-      // Invalidate both the specific recipe and the list
+    // Optimistic update for instant UI feedback
+    onMutate: async ({ recipeId, updates }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.recipe(recipeId) });
+      await queryClient.cancelQueries({ queryKey: queryKeys.recipes });
+
+      // Snapshot previous values
+      const previousRecipe = queryClient.getQueryData<Recipe>(
+        queryKeys.recipe(recipeId),
+      );
+      const previousRecipes = queryClient.getQueryData<Recipe[]>(
+        queryKeys.recipes,
+      );
+
+      // Optimistically update the single recipe
+      if (previousRecipe) {
+        queryClient.setQueryData<Recipe>(queryKeys.recipe(recipeId), {
+          ...previousRecipe,
+          ...updates,
+        });
+      }
+
+      // Optimistically update the recipes list
+      if (previousRecipes) {
+        queryClient.setQueryData<Recipe[]>(queryKeys.recipes, (old = []) =>
+          old.map((recipe) =>
+            recipe.id === recipeId ? { ...recipe, ...updates } : recipe,
+          ),
+        );
+      }
+
+      return { previousRecipe, previousRecipes };
+    },
+    // Rollback on error
+    onError: (err, { recipeId }, context) => {
+      if (context?.previousRecipe) {
+        queryClient.setQueryData(
+          queryKeys.recipe(recipeId),
+          context.previousRecipe,
+        );
+      }
+      if (context?.previousRecipes) {
+        queryClient.setQueryData(queryKeys.recipes, context.previousRecipes);
+      }
+    },
+    // Always refetch after error or success to sync with server
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.recipe(variables.recipeId),
       });

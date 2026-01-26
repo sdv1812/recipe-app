@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { _id: new ObjectId(userId) },
         {
           $addToSet: { preferences: detectedPreference },
-          $set: { updatedAt: new Date().toISOString() },
+          $set: { updatedAt: new Date() },
         },
       );
       userPreferences.push(detectedPreference);

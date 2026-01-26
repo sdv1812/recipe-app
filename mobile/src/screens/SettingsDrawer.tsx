@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { useUser } from "../utils/queries";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
+import Loader from "../components/Loader";
 
 type SettingsDrawerProps = {
   onClose: () => void;
@@ -56,7 +58,7 @@ export default function SettingsDrawer({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeIcon}>✕</Text>
+          <Ionicons name="close" size={24} color={Colors.text.secondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 40 }} />
@@ -71,7 +73,7 @@ export default function SettingsDrawer({
             </Text>
           </View>
           {isLoading ? (
-            <ActivityIndicator size="small" color="#007AFF" />
+            <Loader size="small" />
           ) : (
             <>
               <Text style={styles.userName}>{user?.name || "User"}</Text>
@@ -83,27 +85,37 @@ export default function SettingsDrawer({
         {/* Menu Items */}
         <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem} onPress={handlePreferences}>
-            <Text style={styles.menuIcon}>⚙️</Text>
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color={Colors.text.secondary}
+              style={styles.menuIcon}
+            />
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>My Preferences</Text>
               <Text style={styles.menuSubtitle}>
                 Manage your dietary preferences
               </Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.menuItem} onPress={handleImportJson}>
-            <Text style={styles.menuIcon}>📥</Text>
+            <Ionicons
+              name="download-outline"
+              size={24}
+              color={Colors.text.secondary}
+              style={styles.menuIcon}
+            />
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuTitle}>Import Recipe JSON</Text>
               <Text style={styles.menuSubtitle}>
                 Import recipes from JSON format
               </Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -112,14 +124,19 @@ export default function SettingsDrawer({
             style={[styles.menuItem, styles.disabledMenuItem]}
             disabled
           >
-            <Text style={styles.menuIcon}>🔒</Text>
+            <Ionicons
+              name="lock-closed-outline"
+              size={24}
+              color={Colors.text.secondary}
+              style={styles.menuIcon}
+            />
             <View style={styles.menuTextContainer}>
               <Text style={[styles.menuTitle, styles.disabledText]}>
                 Change Password
               </Text>
               <Text style={styles.menuSubtitle}>Coming soon</Text>
             </View>
-            <Text style={[styles.chevron, styles.disabledText]}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -128,20 +145,25 @@ export default function SettingsDrawer({
             style={[styles.menuItem, styles.disabledMenuItem]}
             disabled
           >
-            <Text style={styles.menuIcon}>👤</Text>
+            <Ionicons
+              name="person-outline"
+              size={24}
+              color={Colors.text.secondary}
+              style={styles.menuIcon}
+            />
             <View style={styles.menuTextContainer}>
               <Text style={[styles.menuTitle, styles.disabledText]}>
                 Manage Account
               </Text>
               <Text style={styles.menuSubtitle}>Coming soon</Text>
             </View>
-            <Text style={[styles.chevron, styles.disabledText]}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutIcon}>🚪</Text>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
@@ -158,139 +180,136 @@ export default function SettingsDrawer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: Spacing.md,
     paddingTop: 60,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   closeButton: {
-    padding: 8,
+    padding: Spacing.xs,
   },
-  closeIcon: {
-    fontSize: 24,
-    color: "#666",
+  closeText: {
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.semibold,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   content: {
     flex: 1,
   },
   profileSection: {
-    backgroundColor: "#fff",
-    padding: 24,
+    backgroundColor: Colors.card,
+    padding: Spacing.xl,
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   avatarCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: "#007AFF",
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   avatarText: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#fff",
+    fontSize: Typography.size["4xl"],
+    fontWeight: Typography.weight.bold,
+    color: Colors.card,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   userEmail: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   menuSection: {
-    backgroundColor: "#fff",
-    marginTop: 16,
+    backgroundColor: Colors.card,
+    marginTop: Spacing.md,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    backgroundColor: "#fff",
+    padding: Spacing.md,
+    backgroundColor: Colors.card,
   },
   disabledMenuItem: {
     opacity: 0.5,
   },
   menuIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   menuTextContainer: {
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   menuSubtitle: {
-    fontSize: 13,
-    color: "#999",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   disabledText: {
-    color: "#999",
+    color: Colors.text.secondary,
   },
   chevron: {
-    fontSize: 24,
-    color: "#ccc",
+    fontSize: Typography.size["2xl"],
+    color: Colors.border,
     fontWeight: "300",
   },
   divider: {
     height: 1,
-    backgroundColor: "#e0e0e0",
-    marginLeft: 52,
+    backgroundColor: Colors.border,
+    marginLeft: Spacing.md,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
-    marginTop: 16,
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    marginTop: Spacing.md,
+    marginHorizontal: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: "#FF3B30",
-  },
-  logoutIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    borderColor: "#DC2626",
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FF3B30",
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
+    color: "#DC2626",
   },
   appInfo: {
     alignItems: "center",
-    padding: 24,
-    marginTop: 16,
+    padding: Spacing.xl,
+    marginTop: Spacing.md,
   },
   appInfoText: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 4,
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
 });

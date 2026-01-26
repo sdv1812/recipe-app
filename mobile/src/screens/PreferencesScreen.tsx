@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { api } from "../utils/api";
+import Loader from "../components/Loader";
 
 export default function PreferencesScreen() {
   const navigation = useNavigation();
@@ -89,7 +91,8 @@ export default function PreferencesScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Preferences</Text>
         <View style={{ width: 60 }} />
@@ -97,7 +100,6 @@ export default function PreferencesScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>💡</Text>
           <Text style={styles.infoText}>
             Set your food preferences here or simply tell the AI when chatting
             with recipes. AI will automatically remember your preferences!
@@ -151,9 +153,7 @@ export default function PreferencesScreen() {
           </Text>
 
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#007AFF" />
-            </View>
+            <Loader />
           ) : preferences.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No preferences yet</Text>
@@ -165,15 +165,12 @@ export default function PreferencesScreen() {
             <View style={styles.preferencesList}>
               {preferences.map((pref, index) => (
                 <View key={index} style={styles.preferenceCard}>
-                  <View style={styles.preferenceContent}>
-                    <Text style={styles.preferenceIcon}>✓</Text>
-                    <Text style={styles.preferenceText}>{pref}</Text>
-                  </View>
+                  <Text style={styles.preferenceText}>{pref}</Text>
                   <TouchableOpacity
                     style={styles.removeButton}
                     onPress={() => handleRemovePreference(pref)}
                   >
-                    <Text style={styles.removeButtonText}>✕</Text>
+                    <Text style={styles.removeButtonText}>Remove</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -188,164 +185,156 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: "#fff",
-    padding: 20,
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
     paddingTop: 60,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: Colors.border,
   },
   backButton: {
-    padding: 8,
+    padding: Spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: "#007AFF",
-    fontWeight: "600",
+    fontSize: Typography.size.base,
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: Spacing.md,
   },
   infoCard: {
-    backgroundColor: "#E3F2FD",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  infoIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    backgroundColor: "#EFF6FF",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.xl,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
   infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#1565C0",
+    fontSize: Typography.size.sm,
+    color: "#1E40AF",
     lineHeight: 20,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: Spacing["2xl"],
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   inputContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.sm,
   },
   input: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.size.base,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
+    color: Colors.text.primary,
   },
   addButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
     justifyContent: "center",
   },
   addButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: Colors.border,
   },
   addButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    color: Colors.card,
+    fontWeight: Typography.weight.semibold,
+    fontSize: Typography.size.base,
   },
   examplesContainer: {
-    marginTop: 16,
+    marginTop: Spacing.md,
   },
   examplesLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
   },
   exampleChip: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    marginBottom: 8,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: Colors.border,
   },
   exampleText: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   preferencesList: {
-    gap: 12,
+    gap: Spacing.md,
   },
   preferenceCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.card,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  preferenceContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  preferenceIcon: {
-    fontSize: 20,
-    color: "#4CAF50",
-    marginRight: 12,
+    borderColor: Colors.border,
   },
   preferenceText: {
-    fontSize: 16,
-    color: "#333",
+    fontSize: Typography.size.base,
+    color: Colors.text.primary,
     flex: 1,
   },
   removeButton: {
-    padding: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
   },
   removeButtonText: {
-    fontSize: 20,
-    color: "#f44336",
+    fontSize: Typography.size.sm,
+    color: "#DC2626",
+    fontWeight: Typography.weight.semibold,
   },
   loadingContainer: {
-    padding: 40,
+    padding: Spacing["3xl"],
     alignItems: "center",
   },
   emptyContainer: {
-    padding: 40,
+    padding: Spacing["3xl"],
     alignItems: "center",
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#999",
-    marginBottom: 8,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: "#bbb",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
     textAlign: "center",
+    opacity: 0.7,
   },
 });

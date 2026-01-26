@@ -13,6 +13,7 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../utils/api";
 import { authStorage } from "../utils/storage";
+import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -116,60 +117,64 @@ export default function LoginScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
     justifyContent: "center",
-    padding: 24,
+    padding: Spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
+    fontSize: Typography.size["4xl"],
+    fontWeight: Typography.weight.bold,
+    marginBottom: Spacing.sm,
     textAlign: "center",
+    color: Colors.text.primary,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 48,
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    marginBottom: Spacing["3xl"],
     textAlign: "center",
   },
   form: {
     width: "100%",
   },
   input: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    fontSize: 16,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    fontSize: Typography.size.base,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    color: Colors.text.primary,
   },
   button: {
-    backgroundColor: "#007AFF",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    color: Colors.card,
+    fontSize: Typography.size.base,
+    fontWeight: Typography.weight.semibold,
   },
   linkButton: {
-    marginTop: 24,
+    marginTop: Spacing.xl,
     alignItems: "center",
   },
   linkText: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
   },
   linkTextBold: {
-    color: "#007AFF",
-    fontWeight: "600",
+    color: Colors.primary,
+    fontWeight: Typography.weight.semibold,
   },
 });
