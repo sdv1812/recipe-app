@@ -314,7 +314,7 @@ export const api = {
     items: Array<{ name: string; quantity?: string; unit?: string }>,
     recipeId?: string,
   ): Promise<{ added: number; updated: number }> {
-    const { data } = await apiClient.post("/groceries/add", {
+    const { data } = await apiClient.post("/groceries", {
       items,
       recipeId,
     });
