@@ -4,10 +4,17 @@
   "description": "RecipeApp Backend API",
   "main": "index.js",
   "scripts": {
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f mongodb",
+    "docker:reset": "docker-compose down -v && docker-compose up -d",
+    "dev:local": "cp .env.local .env && vercel dev",
+    "test:db": "node scripts/test-db-connection.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.3.0",
     "nanoid": "^3.3.11",

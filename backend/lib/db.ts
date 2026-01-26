@@ -20,10 +20,14 @@ export async function connectToDatabase(): Promise<{
   // Trim whitespace/newlines from MongoDB URI
   const mongoUri = process.env.MONGODB_URI.trim();
 
+  // Determine if we're connecting to a local MongoDB or Atlas
+  const isLocal =
+    mongoUri.includes("localhost") || mongoUri.includes("127.0.0.1");
+
   const client = await MongoClient.connect(mongoUri, {
     maxPoolSize: 10,
     minPoolSize: 5,
-    tls: true,
+    tls: !isLocal, // Disable TLS for local connections
     tlsAllowInvalidCertificates: false,
     retryWrites: true,
     serverSelectionTimeoutMS: 5000,
