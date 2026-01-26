@@ -11,7 +11,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { api } from "../utils/api";
+import { useUser } from "../utils/queries";
 
 type SettingsDrawerProps = {
   onClose: () => void;
@@ -24,25 +24,9 @@ export default function SettingsDrawer({
 }: SettingsDrawerProps) {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [userName, setUserName] = useState<string>("");
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUserInfo();
-  }, []);
-
-  const loadUserInfo = async () => {
-    try {
-      const user = await api.getCurrentUser();
-      setUserName(user.name || "User");
-      setUserEmail(user.email);
-    } catch (error) {
-      console.error("Failed to load user info:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use React Query hook for user data
+  const { data: user, isLoading } = useUser();
 
   const handlePreferences = () => {
     onClose();
@@ -83,15 +67,15 @@ export default function SettingsDrawer({
         <View style={styles.profileSection}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarText}>
-              {userName.charAt(0).toUpperCase()}
+              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </Text>
           </View>
-          {loading ? (
+          {isLoading ? (
             <ActivityIndicator size="small" color="#007AFF" />
           ) : (
             <>
-              <Text style={styles.userName}>{userName}</Text>
-              <Text style={styles.userEmail}>{userEmail}</Text>
+              <Text style={styles.userName}>{user?.name || "User"}</Text>
+              <Text style={styles.userEmail}>{user?.email || ""}</Text>
             </>
           )}
         </View>

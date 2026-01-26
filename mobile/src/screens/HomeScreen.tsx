@@ -14,8 +14,8 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { Recipe } from "../../../shared/types";
-import { api } from "../utils/api";
 import { formatTime } from "../utils/timeFormatter";
+import { useRecipes, useDeleteRecipe } from "../utils/queries";
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -24,38 +24,12 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadRecipes = async () => {
-    try {
-      const loadedRecipes = await api.getAllRecipes();
-      setRecipes(loadedRecipes);
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to load recipes",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      loadRecipes();
-    }, []),
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadRecipes();
-    setRefreshing(false);
-  };
+  // Use React Query hooks
+  const { data: recipes = [], isLoading, isFetching, refetch } = useRecipes();
+  const deleteMutation = useDeleteRecipe();
 
   const handleDeleteRecipe = (recipeId: string) => {
     Alert.alert(
@@ -68,8 +42,7 @@ export default function HomeScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await api.deleteRecipe(recipeId);
-              await loadRecipes();
+              await deleteMutation.mutateAsync(recipeId);
             } catch (error) {
               Alert.alert(
                 "Error",
@@ -95,11 +68,10 @@ export default function HomeScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Delete all recipes via API
+              // Delete all recipes via mutation
               await Promise.all(
-                recipes.map((recipe) => api.deleteRecipe(recipe.id)),
+                recipes.map((recipe) => deleteMutation.mutateAsync(recipe.id)),
               );
-              await loadRecipes();
               Alert.alert("Success", "All recipes cleared");
             } catch (error) {
               Alert.alert(
@@ -252,7 +224,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Loading recipes...</Text>
@@ -282,7 +254,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={isFetching} onRefresh={refetch} />
           }
         />
       )}

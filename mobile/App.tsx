@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootStackParamList, TabParamList } from "./src/navigation/types";
 import HomeScreen from "./src/screens/HomeScreen";
 import AddRecipeScreen from "./src/screens/AddRecipeScreen";
@@ -13,6 +14,18 @@ import PreferencesScreen from "./src/screens/PreferencesScreen";
 import SettingsDrawer from "./src/screens/SettingsDrawer";
 import ImportJsonScreen from "./src/screens/ImportJsonScreen";
 import { authStorage } from "./src/utils/storage";
+
+// Create a query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -120,81 +133,83 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        {!isAuthenticated ? (
-          // Auth Stack
-          <>
-            <Stack.Screen name="Login">
-              {(props) => (
-                <LoginScreen {...props} onLoginSuccess={handleAuthSuccess} />
-              )}
-            </Stack.Screen>
-            <Stack.Screen name="Register">
-              {(props) => (
-                <RegisterScreen
-                  {...props}
-                  onRegisterSuccess={handleAuthSuccess}
-                />
-              )}
-            </Stack.Screen>
-          </>
-        ) : (
-          // Main App Stack with Tabs
-          <>
-            <Stack.Screen name="MainTabs">
-              {(props) => <MainTabs {...props} onLogout={handleLogout} />}
-            </Stack.Screen>
-            <Stack.Screen
-              name="RecipeDetail"
-              component={RecipeDetailScreen}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
-            />
-            <Stack.Screen
-              name="Preferences"
-              component={PreferencesScreen}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-                headerShown: true,
-                headerTitle: "My Preferences",
-              }}
-            />
-            <Stack.Screen
-              name="Settings"
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-                headerShown: false,
-              }}
-            >
-              {(props) => (
-                <SettingsDrawer
-                  {...props}
-                  onClose={() => props.navigation.goBack()}
-                  onLogout={handleLogout}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="ImportJson"
-              component={ImportJsonScreen}
-              options={{
-                presentation: "modal",
-                animation: "slide_from_bottom",
-              }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <QueryClientProvider client={queryClient}>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          {!isAuthenticated ? (
+            // Auth Stack
+            <>
+              <Stack.Screen name="Login">
+                {(props) => (
+                  <LoginScreen {...props} onLoginSuccess={handleAuthSuccess} />
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="Register">
+                {(props) => (
+                  <RegisterScreen
+                    {...props}
+                    onRegisterSuccess={handleAuthSuccess}
+                  />
+                )}
+              </Stack.Screen>
+            </>
+          ) : (
+            // Main App Stack with Tabs
+            <>
+              <Stack.Screen name="MainTabs">
+                {(props) => <MainTabs {...props} onLogout={handleLogout} />}
+              </Stack.Screen>
+              <Stack.Screen
+                name="RecipeDetail"
+                component={RecipeDetailScreen}
+                options={{
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                }}
+              />
+              <Stack.Screen
+                name="Preferences"
+                component={PreferencesScreen}
+                options={{
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                  headerShown: true,
+                  headerTitle: "My Preferences",
+                }}
+              />
+              <Stack.Screen
+                name="Settings"
+                options={{
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                  headerShown: false,
+                }}
+              >
+                {(props) => (
+                  <SettingsDrawer
+                    {...props}
+                    onClose={() => props.navigation.goBack()}
+                    onLogout={handleLogout}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen
+                name="ImportJson"
+                component={ImportJsonScreen}
+                options={{
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                }}
+              />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </QueryClientProvider>
   );
 }
 

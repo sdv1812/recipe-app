@@ -4,9 +4,10 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { RecipeImport } from "../../../shared/types";
-import { api } from "../utils/api";
 import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
+import { useCreateRecipe } from "../utils/queries";
+import { api } from "../utils/api";
 
 type AddRecipeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -31,6 +32,7 @@ const WELCOME_MESSAGE: ChatMessage = {
 
 export default function AddRecipeScreen() {
   const navigation = useNavigation<AddRecipeScreenNavigationProp>();
+  const createMutation = useCreateRecipe();
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     WELCOME_MESSAGE,
@@ -87,7 +89,7 @@ export default function AddRecipeScreen() {
 
   const handleSaveRecipe = async (recipe: RecipeImport) => {
     try {
-      await api.createRecipe(recipe);
+      await createMutation.mutateAsync(recipe);
 
       const confirmMessage: ChatMessage = {
         id: Date.now().toString(),

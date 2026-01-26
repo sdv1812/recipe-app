@@ -17,6 +17,7 @@ import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
+import { useRecipe, useUpdateRecipe } from "../utils/queries";
 
 type RecipeDetailRouteProp = RouteProp<RootStackParamList, "RecipeDetail">;
 type RecipeDetailNavigationProp = NativeStackNavigationProp<
@@ -45,8 +46,10 @@ export default function RecipeDetailScreen() {
   const route = useRoute<RecipeDetailRouteProp>();
   const { recipeId } = route.params;
 
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use React Query hooks
+  const { data: recipe, isLoading, refetch } = useRecipe(recipeId);
+  const updateMutation = useUpdateRecipe();
+
   const [activeTab, setActiveTab] = useState<
     "ingredients" | "prep" | "cooking" | "shopping"
   >("ingredients");
@@ -56,10 +59,6 @@ export default function RecipeDetailScreen() {
   const [isChatting, setIsChatting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
-
-  useEffect(() => {
-    loadRecipe();
-  }, [recipeId]);
 
   useEffect(() => {
     // Initialize chat history with welcome message and recipe
@@ -73,21 +72,6 @@ export default function RecipeDetailScreen() {
       ]);
     }
   }, [recipe]);
-
-  const loadRecipe = async () => {
-    try {
-      const loadedRecipe = await api.getRecipeById(recipeId);
-      setRecipe(loadedRecipe);
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Recipe not found",
-        [{ text: "OK", onPress: () => navigation.goBack() }],
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const convertRecipeToImport = (recipe: Recipe): RecipeImport => {
     return {
@@ -229,10 +213,11 @@ export default function RecipeDetailScreen() {
         })),
       };
 
-      await api.updateRecipe(recipe.id, updatedRecipe);
+      await updateMutation.mutateAsync({
+        recipeId: recipe.id,
+        updates: updatedRecipe,
+      });
 
-      // Reload the recipe
-      await loadRecipe();
       setShowPreview(false);
       setPreviewRecipe(null);
 
@@ -275,7 +260,13 @@ export default function RecipeDetailScreen() {
       [type === "prep" ? "preparationSteps" : "cookingSteps"]: updatedSteps,
     };
 
-    setRecipe(updatedRecipe);
+    // Optimistically update using the mutation
+    updateMutation.mutate({
+      recipeId: recipe.id,
+      updates: {
+        [type === "prep" ? "preparationSteps" : "cookingSteps"]: updatedSteps,
+      },
+    });
   };
 
   const toggleShoppingItem = (itemId: string) => {
@@ -285,12 +276,13 @@ export default function RecipeDetailScreen() {
       item.id === itemId ? { ...item, purchased: !item.purchased } : item,
     );
 
-    const updatedRecipe = {
-      ...recipe,
-      shoppingList: updatedItems,
-    };
-
-    setRecipe(updatedRecipe);
+    // Optimistically update using the mutation
+    updateMutation.mutate({
+      recipeId: recipe.id,
+      updates: {
+        shoppingList: updatedItems,
+      },
+    });
   };
 
   const formatTimeBreakdown = () => {
@@ -346,7 +338,7 @@ export default function RecipeDetailScreen() {
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
