@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { RecipeImport } from "../../../shared/types";
+import Header from "./Header";
 
 type RecipePreviewModalProps = {
   recipe: RecipeImport;
@@ -32,14 +33,7 @@ export default function RecipePreviewModal({
       onRequestClose={onDiscard}
     >
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onDiscard} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color={Colors.text.secondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Recipe Preview</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <Header title="Recipe Preview" showClose={true} onClose={onDiscard} />
 
         {/* Recipe Content */}
         <ScrollView style={styles.content}>
@@ -199,24 +193,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.base,
-    paddingTop: 60,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  closeButton: {
-    padding: Spacing.sm,
-  },
-  headerTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
   },
   content: {
     flex: 1,

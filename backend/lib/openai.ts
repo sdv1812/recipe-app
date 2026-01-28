@@ -50,6 +50,7 @@ export async function generateRecipe(
     ],
     temperature: 0.7,
     max_tokens: 2000,
+    response_format: { type: "json_object" }, // Force JSON mode
   });
 
   return completion.choices[0].message.content || "";

@@ -20,6 +20,7 @@ import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
+import Header from "../components/Header";
 import {
   useRecipe,
   useUpdateRecipe,
@@ -418,41 +419,39 @@ export default function RecipeDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={24} color={Colors.primary} />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.aiButton}
-            onPress={() => setShowChatModal(true)}
-          >
-            <Ionicons
-              name="sparkles-outline"
-              size={16}
-              color={Colors.primary}
-            />
-            <Text style={styles.aiButtonText}>Edit with AI</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleToggleFavorite}
-          >
-            <Ionicons
-              name={recipe.isFavorite ? "heart" : "heart-outline"}
-              size={24}
-              color={recipe.isFavorite ? Colors.primary : Colors.text.secondary}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
-            <Ionicons name="share-outline" size={22} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header
+        showBack={true}
+        rightActions={
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.aiButton}
+              onPress={() => setShowChatModal(true)}
+            >
+              <Ionicons
+                name="sparkles-outline"
+                size={16}
+                color={Colors.primary}
+              />
+              <Text style={styles.aiButtonText}>Edit with AI</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleToggleFavorite}
+            >
+              <Ionicons
+                name={recipe.isFavorite ? "heart" : "heart-outline"}
+                size={24}
+                color={
+                  recipe.isFavorite ? Colors.primary : Colors.text.secondary
+                }
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+              <Ionicons name="share-outline" size={22} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       <ScrollView style={styles.content}>
         <View style={styles.recipeHeader}>
@@ -693,20 +692,12 @@ export default function RecipeDetailScreen() {
         presentationStyle="pageSheet"
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderContent}>
-              <Text style={styles.modalHeaderTitle}>Edit: {recipe.title}</Text>
-              <Text style={styles.modalHeaderSubtitle}>
-                Ask AI to modify your recipe
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowChatModal(false)}
-            >
-              <Ionicons name="close" size={24} color={Colors.text.secondary} />
-            </TouchableOpacity>
-          </View>
+          <Header
+            title={`Edit: ${recipe.title}`}
+            subtitle="Ask AI to modify your recipe"
+            showClose={true}
+            onClose={() => setShowChatModal(false)}
+          />
 
           <ChatInterface
             chatHistory={chatHistory}
@@ -747,27 +738,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontSize: Typography.size.base,
     color: Colors.text.secondary,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    padding: Spacing.lg,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  backButton: {
-    padding: Spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  backButtonText: {
-    fontSize: Typography.size.base,
-    color: Colors.primary,
-    fontWeight: Typography.weight.semibold,
   },
   headerActions: {
     flexDirection: "row",
@@ -1048,33 +1018,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  modalHeader: {
-    backgroundColor: Colors.card,
-    padding: Spacing.md,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalHeaderContent: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  modalHeaderTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  modalHeaderSubtitle: {
-    fontSize: Typography.size.sm,
-    color: Colors.text.secondary,
-  },
-  modalCloseButton: {
-    padding: Spacing.xs,
   },
   recipeCard: {
     marginTop: Spacing.md,

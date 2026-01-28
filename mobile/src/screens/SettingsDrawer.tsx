@@ -14,6 +14,7 @@ import { RootStackParamList } from "../navigation/types";
 import { useUser } from "../utils/queries";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import Loader from "../components/Loader";
+import Header from "../components/Header";
 
 type SettingsDrawerProps = {
   onClose: () => void;
@@ -56,13 +57,7 @@ export default function SettingsDrawer({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={Colors.text.secondary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Header title="Settings" showClose={true} onClose={onClose} />
 
       <ScrollView style={styles.content}>
         {/* User Profile Section */}
@@ -181,29 +176,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.md,
-    paddingTop: 60,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  closeButton: {
-    padding: Spacing.xs,
-  },
-  closeText: {
-    fontSize: Typography.size.base,
-    color: Colors.text.secondary,
-    fontWeight: Typography.weight.semibold,
-  },
-  headerTitle: {
-    fontSize: Typography.size.xl,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
   },
   content: {
     flex: 1,

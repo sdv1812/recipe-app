@@ -8,11 +8,11 @@ import {
   Alert,
   TextInput,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { api } from "../utils/api";
 import Loader from "../components/Loader";
+import Header from "../components/Header";
 
 export default function PreferencesScreen() {
   const navigation = useNavigation();
@@ -20,6 +20,10 @@ export default function PreferencesScreen() {
   const [loading, setLoading] = useState(true);
   const [newPreference, setNewPreference] = useState("");
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   useEffect(() => {
     loadPreferences();
@@ -86,17 +90,7 @@ export default function PreferencesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={24} color={Colors.primary} />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Preferences</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <Header title="My Preferences" showBack={true} />
 
       <ScrollView style={styles.content}>
         <View style={styles.infoCard}>
@@ -186,32 +180,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    padding: Spacing.lg,
-    paddingTop: 60,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  backButtonText: {
-    fontSize: Typography.size.base,
-    color: Colors.primary,
-    fontWeight: Typography.weight.semibold,
-  },
-  headerTitle: {
-    fontSize: Typography.size.xl,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
   },
   content: {
     flex: 1,

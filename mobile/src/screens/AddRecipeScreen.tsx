@@ -6,6 +6,7 @@ import { RootStackParamList } from "../navigation/types";
 import { RecipeImport } from "../../../shared/types";
 import RecipePreviewModal from "../components/RecipePreviewModal";
 import ChatInterface from "../components/ChatInterface";
+import Header from "../components/Header";
 import { useCreateRecipe } from "../utils/queries";
 import { api } from "../utils/api";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
@@ -178,13 +179,13 @@ export default function AddRecipeScreen() {
 
   return (
     <View style={styles.container}>
+      <Header title="AI Chef" subtitle="Create recipes with AI" />
+
       <ChatInterface
         chatHistory={chatHistory}
         userMessage={userMessage}
         isGenerating={isGenerating}
         placeholder="Describe the recipe you'd like..."
-        headerTitle="AI Chef"
-        headerSubtitle="Create recipes with AI"
         onMessageChange={setUserMessage}
         onSendMessage={handleSendMessage}
         renderMessageExtras={renderRecipeCard}

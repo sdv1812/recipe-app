@@ -18,6 +18,7 @@ import { formatTime } from "../utils/timeFormatter";
 import { useRecipes, useDeleteRecipe } from "../utils/queries";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
+import Header from "../components/Header";
 import {
   Colors,
   Typography,
@@ -227,42 +228,42 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Recipes</Text>
-          {recipes.length > 0 && (
-            <Text style={styles.headerSubtitle}>
-              {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
-            </Text>
-          )}
-        </View>
-        <View style={styles.headerActions}>
-          {recipes.length > 0 && (
+      <Header
+        title="Recipes"
+        subtitle={
+          recipes.length > 0
+            ? `${recipes.length} ${recipes.length === 1 ? "recipe" : "recipes"}`
+            : undefined
+        }
+        rightActions={
+          <View style={styles.headerActions}>
+            {recipes.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClearAllRecipes}
+                style={styles.clearAllButton}
+              >
+                <Text style={styles.clearAllText}>Clear All</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              onPress={handleClearAllRecipes}
-              style={styles.clearAllButton}
-            >
-              <Text style={styles.clearAllText}>Clear All</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              showFavoritesOnly && styles.filterButtonActive,
-            ]}
-            onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          >
-            <Text
               style={[
-                styles.filterButtonText,
-                showFavoritesOnly && styles.filterButtonTextActive,
+                styles.filterButton,
+                showFavoritesOnly && styles.filterButtonActive,
               ]}
+              onPress={() => setShowFavoritesOnly(!showFavoritesOnly)}
             >
-              Favorites
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  showFavoritesOnly && styles.filterButtonTextActive,
+                ]}
+              >
+                Favorites
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       {recipes.length > 0 && (
         <View style={styles.searchWrapper}>
@@ -337,30 +338,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    paddingTop: 60,
-    paddingBottom: Spacing.base,
-    paddingHorizontal: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: Typography.size["3xl"],
-    fontWeight: Typography.weight.semibold,
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: Typography.size.sm,
-    color: Colors.text.secondary,
   },
   headerActions: {
     flexDirection: "row",

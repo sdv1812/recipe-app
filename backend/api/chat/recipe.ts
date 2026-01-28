@@ -80,20 +80,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       userPreferences,
     );
 
+    // Helper function to clean and extract JSON
+    const extractJSON = (text: string): string => {
+      // Remove markdown code blocks
+      let cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "");
+
+      // Try to find JSON object
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON object found in response");
+      }
+
+      let jsonStr = jsonMatch[0];
+
+      // Fix common JSON issues
+      // Remove trailing commas before closing braces/brackets
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+
+      // Ensure property names are double-quoted (fix single quotes or unquoted)
+      jsonStr = jsonStr.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":');
+
+      return jsonStr;
+    };
+
     // Parse updated recipe with better error handling
     let updatedRecipeData: RecipeImport;
     try {
-      // First, try to clean the response
-      let cleanedResponse = aiResponse.trim();
-
-      // Try to extract JSON if wrapped in text
-      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanedResponse = jsonMatch[0];
-      }
-
-      // Parse the JSON
-      updatedRecipeData = JSON.parse(cleanedResponse);
+      const cleanedJSON = extractJSON(aiResponse);
+      updatedRecipeData = JSON.parse(cleanedJSON);
 
       // Validate required fields
       if (!updatedRecipeData.title || !updatedRecipeData.ingredients) {

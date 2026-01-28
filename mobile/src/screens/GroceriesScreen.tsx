@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import Loader from "../components/Loader";
+import Header from "../components/Header";
 import {
   useGroceries,
   useToggleGroceryItem,
@@ -127,27 +128,29 @@ export default function GroceriesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Grocery List</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => setShowAddModal(true)}
-            style={styles.addButton}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-          {completedItems.length > 0 && (
+      <Header
+        title="Grocery List"
+        rightActions={
+          <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={handleClearCompleted}
-              style={styles.clearButton}
+              onPress={() => setShowAddModal(true)}
+              style={styles.addButton}
             >
-              <Text style={styles.clearButtonText}>
-                Clear Done ({completedItems.length})
-              </Text>
+              <Text style={styles.addButtonText}>+ Add</Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+            {completedItems.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClearCompleted}
+                style={styles.clearButton}
+              >
+                <Text style={styles.clearButtonText}>
+                  Clear Done ({completedItems.length})
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+      />
 
       {pendingItems.length === 0 && completedItems.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -271,21 +274,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    padding: Spacing.lg,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: Typography.size["3xl"],
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
   },
   headerActions: {
     flexDirection: "row",

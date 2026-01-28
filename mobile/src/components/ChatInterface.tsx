@@ -25,8 +25,6 @@ interface ChatInterfaceProps {
   userMessage: string;
   isGenerating: boolean;
   placeholder?: string;
-  headerTitle?: string;
-  headerSubtitle?: string;
   onMessageChange: (message: string) => void;
   onSendMessage: () => void;
   renderMessageExtras?: (message: ChatMessage) => React.ReactNode;
@@ -37,8 +35,6 @@ export default function ChatInterface({
   userMessage,
   isGenerating,
   placeholder = "Type a message...",
-  headerTitle,
-  headerSubtitle,
   onMessageChange,
   onSendMessage,
   renderMessageExtras,
@@ -85,15 +81,6 @@ export default function ChatInterface({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={80}
     >
-      {(headerTitle || headerSubtitle) && (
-        <View style={styles.header}>
-          {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
-          {headerSubtitle && (
-            <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
-          )}
-        </View>
-      )}
-
       <ScrollView
         ref={scrollViewRef}
         style={styles.chatContainer}
@@ -144,24 +131,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    paddingTop: 60,
-    paddingBottom: Spacing.base,
-    paddingHorizontal: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontSize: Typography.size["2xl"],
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  headerSubtitle: {
-    fontSize: Typography.size.sm,
-    color: Colors.text.secondary,
   },
   chatContainer: {
     flex: 1,

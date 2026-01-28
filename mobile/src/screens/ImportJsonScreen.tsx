@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -19,6 +18,7 @@ import { parseRecipeJson, validateRecipeJson } from "../utils/recipeParser";
 import { RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
+import Header from "../components/Header";
 
 type ImportJsonScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -77,16 +77,7 @@ export default function ImportJsonScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={28} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Import Recipe JSON</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Header title="Import Recipe JSON" showBack={true} />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -173,29 +164,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.card,
-    paddingTop: 60,
-    paddingBottom: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    padding: Spacing.xs,
-  },
-  backIcon: {
-    fontSize: Typography.size["2xl"],
-    color: Colors.primary,
-  },
-  headerTitle: {
-    fontSize: Typography.size.lg,
-    fontWeight: Typography.weight.bold,
-    color: Colors.text.primary,
   },
   keyboardView: {
     flex: 1,

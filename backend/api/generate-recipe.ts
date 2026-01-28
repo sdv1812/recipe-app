@@ -35,7 +35,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // System prompt to enforce JSON structure
     const systemPrompt = `You are a professional chef and recipe generator. 
-Generate a recipe based on the user's request and return it in this EXACT JSON format:
+Generate a recipe based on the user's request and return it in this EXACT JSON format.
+
+CRITICAL RULES:
+1. Return ONLY valid JSON - no markdown, no code blocks, no extra text
+2. All property names MUST be in double quotes
+3. All string values MUST be in double quotes
+4. No trailing commas after last array/object items
+5. Use double quotes only, never single quotes
 
 {
   "title": "Recipe Name",
@@ -64,7 +71,7 @@ Generate a recipe based on the user's request and return it in this EXACT JSON f
 }
 
 IMPORTANT: 
-- Return ONLY valid JSON, no additional text
+- Return ONLY valid JSON, no additional text or markdown
 - Include realistic cooking times
 - Provide detailed, clear instructions
 - Use appropriate categories and tags`;
@@ -80,18 +87,40 @@ IMPORTANT:
       userPreferences,
     );
 
-    // Parse the JSON response
+    // Helper function to clean and extract JSON
+    const extractJSON = (text: string): string => {
+      // Remove markdown code blocks
+      let cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "");
+
+      // Try to find JSON object
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON object found in response");
+      }
+
+      let jsonStr = jsonMatch[0];
+
+      // Fix common JSON issues
+      // Remove trailing commas before closing braces/brackets
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+
+      // Ensure property names are double-quoted (fix single quotes or unquoted)
+      jsonStr = jsonStr.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":');
+
+      return jsonStr;
+    };
+
+    // Parse the JSON response with better error handling
     let recipe: RecipeImport;
     try {
-      recipe = JSON.parse(aiResponse);
+      const cleanedJSON = extractJSON(aiResponse);
+      recipe = JSON.parse(cleanedJSON);
     } catch (parseError) {
-      // Try to extract JSON from the response if it's wrapped in text
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        recipe = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse recipe JSON from AI response");
-      }
+      console.error("Failed to parse AI response:", aiResponse);
+      console.error("Parse error:", parseError);
+      throw new Error(
+        `Failed to parse recipe JSON. The AI returned invalid JSON. Please try again.`,
+      );
     }
 
     return res.status(200).json({
