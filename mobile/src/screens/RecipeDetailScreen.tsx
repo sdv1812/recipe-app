@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe, ChatMessage, RecipeImport } from "../../../shared/types";
+import { Recipe, RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
 import RecipePreviewModal from "../components/RecipePreviewModal";
@@ -279,22 +280,6 @@ export default function RecipeDetailScreen() {
       recipeId: recipe.id,
       updates: {
         [type === "prep" ? "preparationSteps" : "cookingSteps"]: updatedSteps,
-      },
-    });
-  };
-
-  const toggleShoppingItem = (itemId: string) => {
-    if (!recipe) return;
-
-    const updatedItems = recipe.shoppingList.map((item) =>
-      item.id === itemId ? { ...item, purchased: !item.purchased } : item,
-    );
-
-    // Optimistically update using the mutation
-    updateMutation.mutate({
-      recipeId: recipe.id,
-      updates: {
-        shoppingList: updatedItems,
       },
     });
   };
@@ -649,12 +634,30 @@ export default function RecipeDetailScreen() {
                 </View>
                 {selectedShoppingItems.size > 0 && (
                   <TouchableOpacity
-                    style={styles.addToGroceriesButton}
+                    style={[
+                      styles.addToGroceriesButton,
+                      addToGroceriesMutation.isPending &&
+                        styles.addToGroceriesButtonDisabled,
+                    ]}
                     onPress={handleAddToGroceries}
+                    disabled={addToGroceriesMutation.isPending}
                   >
-                    <Text style={styles.addToGroceriesButtonText}>
-                      Add to Groceries
-                    </Text>
+                    {addToGroceriesMutation.isPending ? (
+                      <>
+                        <ActivityIndicator
+                          size="small"
+                          color={Colors.card}
+                          style={styles.buttonLoader}
+                        />
+                        <Text style={styles.addToGroceriesButtonText}>
+                          Adding...
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.addToGroceriesButtonText}>
+                        Add to Groceries
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 )}
               </View>
@@ -974,6 +977,14 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: "center",
     marginBottom: Spacing.sm,
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  addToGroceriesButtonDisabled: {
+    opacity: 0.6,
+  },
+  buttonLoader: {
+    marginRight: Spacing.sm,
   },
   addToGroceriesButtonText: {
     fontSize: Typography.size.base,
