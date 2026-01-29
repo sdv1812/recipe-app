@@ -91,6 +91,7 @@ export const api = {
       role: "user" | "assistant";
       content: string;
       timestamp: string;
+      recipe?: any;
     }> = [],
   ): Promise<{ recipe: Recipe; message: string; preferenceAdded?: string }> {
     const { data } = await apiClient.post<ChatWithRecipeResponse>(

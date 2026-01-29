@@ -87,6 +87,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  recipe?: RecipeImport; // Include recipe data in assistant messages for context
 }
 
 export interface Comment {

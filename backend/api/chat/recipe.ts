@@ -72,9 +72,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       preferenceAdded = true;
     }
 
-    // Get AI response with recipe updates (including user preferences)
+    // Find the latest recipe version from chat history (most recent assistant message with recipe)
+    // This ensures we modify the latest version, not the original database version
+    let currentRecipe = recipe;
+    for (let i = chatHistory.length - 1; i >= 0; i--) {
+      if (chatHistory[i].role === "assistant" && chatHistory[i].recipe) {
+        // Convert RecipeImport from chat to Recipe format for consistency
+        const latestRecipeImport = chatHistory[i].recipe!;
+        currentRecipe = {
+          ...recipe,
+          title: latestRecipeImport.title,
+          description: latestRecipeImport.description,
+          servings: latestRecipeImport.servings,
+          prepTimeMinutes: latestRecipeImport.prepTimeMinutes,
+          marinateTimeMinutes: latestRecipeImport.marinateTimeMinutes,
+          cookTimeMinutes: latestRecipeImport.cookTimeMinutes,
+          category: latestRecipeImport.category || [],
+          tags: latestRecipeImport.tags || [],
+          ingredients: latestRecipeImport.ingredients,
+          preparationSteps: latestRecipeImport.preparationSteps.map(
+            (step: any, idx: number) => ({
+              stepNumber: idx + 1,
+              instruction: typeof step === "string" ? step : step.instruction,
+              completed: false,
+            }),
+          ),
+          cookingSteps: latestRecipeImport.cookingSteps.map(
+            (step: any, idx: number) => ({
+              stepNumber: idx + 1,
+              instruction: typeof step === "string" ? step : step.instruction,
+              completed: false,
+            }),
+          ),
+        };
+        break;
+      }
+    }
+
+    // Get AI response with recipe updates (using latest recipe version from chat)
     const aiResponse = await updateRecipeWithChat(
-      recipe,
+      currentRecipe,
       message,
       chatHistory,
       userPreferences,

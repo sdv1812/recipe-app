@@ -151,8 +151,23 @@ export default function RecipeDetailScreen() {
     setChatHistory((prev) => [...prev, newUserMessage]);
 
     try {
-      // Call API to update recipe
-      const response = await api.chatWithRecipe(recipe.id, userMessage, []);
+      // Build chat history in format expected by backend (exclude welcome message)
+      // Include recipe data in assistant messages so AI knows the latest version
+      const chatHistoryForAPI = chatHistory
+        .filter((msg) => msg.id !== "welcome") // Exclude welcome message
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          recipe: msg.recipe, // Include recipe data if present
+        }));
+
+      // Call API to update recipe with full chat history for context
+      const response = await api.chatWithRecipe(
+        recipe.id,
+        userMessage,
+        chatHistoryForAPI,
+      );
 
       const recipeAsImport = convertRecipeToImport(response.recipe);
 
