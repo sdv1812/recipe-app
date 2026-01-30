@@ -9,9 +9,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -207,7 +207,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
   const isLoading = mode === "existing" && threadLoading;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -224,8 +224,8 @@ export default function ChatModalScreen({ route, navigation }: Props) {
 
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Chat Messages */}
         {isLoading ? (
@@ -309,11 +309,10 @@ export default function ChatModalScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: "row",
@@ -502,7 +501,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingBottom: Platform.OS === "ios" ? Spacing.base : Spacing["2xl"],
   },
   input: {
     flex: 1,
