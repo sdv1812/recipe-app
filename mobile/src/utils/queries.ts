@@ -133,29 +133,6 @@ export function useDeleteRecipe() {
   });
 }
 
-export function useChatWithRecipe() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      recipeId,
-      message,
-      history,
-    }: {
-      recipeId: string;
-      message: string;
-      history: any[];
-    }) => api.chatWithRecipe(recipeId, message, history),
-    onSuccess: (_, variables) => {
-      // Invalidate the specific recipe to show updated version
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.recipe(variables.recipeId),
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.recipes });
-    },
-  });
-}
-
 // Grocery Queries
 export function useGroceries() {
   return useQuery({

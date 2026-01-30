@@ -3,10 +3,6 @@ import {
   RecipeImport,
   Recipe,
   GroceryItem,
-  ChatWithRecipeRequest,
-  ChatWithRecipeResponse,
-  GenerateRecipeRequest,
-  GenerateRecipeResponse,
   Thread,
   ThreadMessage,
   CreateThreadRequest,
@@ -77,55 +73,6 @@ apiClient.interceptors.response.use(
 
 export const api = {
   /**
-   * Generate a new recipe using AI
-   */
-  async generateRecipe(prompt: string): Promise<RecipeImport> {
-    const { data } = await apiClient.post<GenerateRecipeResponse>(
-      "/generate-recipe",
-      { prompt } as GenerateRecipeRequest,
-    );
-
-    if (!data.success || !data.recipe) {
-      throw new Error(data.error || "Failed to generate recipe");
-    }
-
-    return data.recipe;
-  },
-
-  /**
-   * Chat with AI to modify an existing recipe
-   */
-  async chatWithRecipe(
-    recipeId: string,
-    message: string,
-    chatHistory: Array<{
-      role: "user" | "assistant";
-      content: string;
-      timestamp: string;
-      recipe?: any;
-    }> = [],
-  ): Promise<{ recipe: Recipe; message: string; preferenceAdded?: string }> {
-    const { data } = await apiClient.post<ChatWithRecipeResponse>(
-      "/chat/recipe",
-      {
-        recipeId,
-        message,
-        chatHistory,
-      } as ChatWithRecipeRequest,
-    );
-
-    if (!data.success || !data.updatedRecipe || !data.assistantMessage) {
-      throw new Error(data.error || "Failed to chat with AI");
-    }
-
-    return {
-      recipe: data.updatedRecipe,
-      message: data.assistantMessage,
-      preferenceAdded: data.preferenceAdded,
-    };
-  },
-
-  /**
    * Create a recipe on the server
    */
   async createRecipe(recipe: RecipeImport): Promise<Recipe> {
@@ -189,19 +136,6 @@ export const api = {
     if (!data.success) {
       throw new Error(data.error || "Failed to delete recipe");
     }
-  },
-
-  /**
-   * Create a shareable link
-   */
-  async createShareLink(recipeId: string): Promise<string> {
-    const { data } = await apiClient.post("/share/create", { recipeId });
-
-    if (!data.success || !data.shareUrl) {
-      throw new Error(data.error || "Failed to create share link");
-    }
-
-    return data.shareUrl;
   },
 
   /**

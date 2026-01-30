@@ -47,9 +47,6 @@ export interface Recipe {
   updatedAt?: string;
   imageUrl?: string;
   isFavorite?: boolean;
-  isPublished?: boolean; // For social features
-  likes?: number;
-  aiChatHistory?: ChatMessage[]; // Deprecated - use Thread messages instead
 }
 
 export interface RecipeImport {
@@ -74,14 +71,6 @@ export interface User {
   name?: string;
   preferences?: string[]; // User food preferences
   createdAt: string;
-}
-
-export interface ShareToken {
-  id: string;
-  recipeId: string;
-  token: string;
-  createdAt: string;
-  expiresAt?: string;
 }
 
 export interface ChatMessage {
@@ -140,42 +129,6 @@ export interface GroceryItem {
   recipeIds: string[]; // Track which recipes this item came from
   createdAt: string;
   completedAt?: string;
-}
-
-// API Request/Response types
-export interface GenerateRecipeRequest {
-  prompt: string;
-}
-
-export interface GenerateRecipeResponse {
-  success: boolean;
-  recipe?: RecipeImport;
-  error?: string;
-}
-
-export interface ChatWithRecipeRequest {
-  recipeId: string;
-  message: string;
-  chatHistory?: ChatMessage[];
-}
-
-export interface ChatWithRecipeResponse {
-  success: boolean;
-  updatedRecipe?: Recipe;
-  assistantMessage?: string;
-  preferenceAdded?: string;
-  error?: string;
-}
-
-export interface CreateShareLinkRequest {
-  recipeId: string;
-}
-
-export interface CreateShareLinkResponse {
-  success: boolean;
-  shareUrl?: string;
-  token?: string;
-  error?: string;
 }
 
 // Thread API types

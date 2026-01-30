@@ -85,10 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         shoppingList,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        isPublished: false,
-        likes: 0,
         isFavorite: false,
-        aiChatHistory: [],
       };
 
       const result = await recipes.insertOne(newRecipe as any);
