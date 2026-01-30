@@ -208,25 +208,25 @@ export default function ChatModalScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="close" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{threadTitle}</Text>
+        <View style={styles.headerRight}>
+          {/* Optional: Add overflow menu button here */}
+        </View>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="close" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{threadTitle}</Text>
-          <View style={styles.headerRight}>
-            {/* Optional: Add overflow menu button here */}
-          </View>
-        </View>
-
         {/* Chat Messages */}
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -237,6 +237,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
             ref={scrollViewRef}
             style={styles.chatContainer}
             contentContainerStyle={styles.chatContent}
+            keyboardShouldPersistTaps="handled"
           >
             {isEmpty && (
               <View style={styles.emptyState}>
@@ -501,7 +502,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingBottom: Spacing["2xl"],
+    paddingBottom: Platform.OS === "ios" ? Spacing.base : Spacing["2xl"],
   },
   input: {
     flex: 1,
