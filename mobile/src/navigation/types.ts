@@ -17,7 +17,6 @@ export type RootStackParamList = {
   ChatModal: { threadId?: string; mode: "new" | "existing" }; // New chat modal
   Preferences: undefined;
   Settings: undefined;
-  ImportJson: undefined;
 };
 
 declare global {

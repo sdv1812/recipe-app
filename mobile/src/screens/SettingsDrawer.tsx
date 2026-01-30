@@ -36,11 +36,6 @@ export default function SettingsDrawer({
     navigation.navigate("Preferences");
   };
 
-  const handleImportJson = () => {
-    onClose();
-    navigation.navigate("ImportJson");
-  };
-
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -90,24 +85,6 @@ export default function SettingsDrawer({
               <Text style={styles.menuTitle}>My Preferences</Text>
               <Text style={styles.menuSubtitle}>
                 Manage your dietary preferences
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleImportJson}>
-            <Ionicons
-              name="download-outline"
-              size={24}
-              color={Colors.text.secondary}
-              style={styles.menuIcon}
-            />
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuTitle}>Import Recipe JSON</Text>
-              <Text style={styles.menuSubtitle}>
-                Import recipes from JSON format
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.border} />

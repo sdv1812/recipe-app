@@ -13,7 +13,6 @@ import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
 import PreferencesScreen from "./src/screens/PreferencesScreen";
 import SettingsDrawer from "./src/screens/SettingsDrawer";
-import ImportJsonScreen from "./src/screens/ImportJsonScreen";
 import GroceriesScreen from "./src/screens/GroceriesScreen";
 import { authStorage } from "./src/utils/storage";
 import { Colors } from "./src/constants/design";
@@ -211,14 +210,6 @@ export default function App() {
                   />
                 )}
               </Stack.Screen>
-              <Stack.Screen
-                name="ImportJson"
-                component={ImportJsonScreen}
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                }}
-              />
             </>
           )}
         </Stack.Navigator>
