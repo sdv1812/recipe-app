@@ -30,6 +30,7 @@ export interface ShoppingItem {
 export interface Recipe {
   id: string;
   userId?: string; // Added for multi-user support
+  threadId?: string; // Link to chat thread for this recipe
   title: string;
   description?: string;
   servings?: number;
@@ -48,7 +49,7 @@ export interface Recipe {
   isFavorite?: boolean;
   isPublished?: boolean; // For social features
   likes?: number;
-  aiChatHistory?: ChatMessage[];
+  aiChatHistory?: ChatMessage[]; // Deprecated - use Thread messages instead
 }
 
 export interface RecipeImport {
@@ -88,6 +89,36 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   recipe?: RecipeImport; // Include recipe data in assistant messages for context
+}
+
+// Thread status for chat workspace model
+export type ThreadStatus = "draft" | "recipe_created" | "archived";
+
+// Thread represents a chat conversation workspace
+export interface Thread {
+  id: string;
+  userId: string;
+  title: string; // "New chat" initially, then becomes recipe title
+  status: ThreadStatus;
+  recipeId?: string; // Linked recipe ID when status is recipe_created
+  messages: ThreadMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Thread message - enhanced from ChatMessage
+export interface ThreadMessage {
+  id: string;
+  threadId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: string;
+  recipeData?: RecipeImport; // Attached recipe data when assistant generates recipe
+  error?: boolean; // Mark messages that had parsing errors
+  metadata?: {
+    parseError?: string;
+    suggestionChips?: string[];
+  };
 }
 
 export interface Comment {
@@ -144,5 +175,59 @@ export interface CreateShareLinkResponse {
   success: boolean;
   shareUrl?: string;
   token?: string;
+  error?: string;
+}
+
+// Thread API types
+export interface CreateThreadRequest {
+  title?: string; // Optional initial title
+}
+
+export interface CreateThreadResponse {
+  success: boolean;
+  thread?: Thread;
+  error?: string;
+}
+
+export interface GetThreadsResponse {
+  success: boolean;
+  threads?: Thread[];
+  error?: string;
+}
+
+export interface GetThreadResponse {
+  success: boolean;
+  thread?: Thread;
+  error?: string;
+}
+
+export interface SendMessageRequest {
+  threadId: string;
+  message: string;
+}
+
+export interface SendMessageResponse {
+  success: boolean;
+  message?: ThreadMessage; // User message
+  assistantMessage?: ThreadMessage; // AI response
+  recipe?: Recipe; // If recipe was created/updated
+  recipeCreated?: boolean; // True if this is the first recipe creation
+  error?: string;
+}
+
+export interface UpdateThreadRequest {
+  title?: string;
+  status?: ThreadStatus;
+  recipeId?: string;
+}
+
+export interface UpdateThreadResponse {
+  success: boolean;
+  thread?: Thread;
+  error?: string;
+}
+
+export interface DeleteThreadResponse {
+  success: boolean;
   error?: string;
 }

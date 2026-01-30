@@ -7,6 +7,17 @@ import {
   ChatWithRecipeResponse,
   GenerateRecipeRequest,
   GenerateRecipeResponse,
+  Thread,
+  ThreadMessage,
+  CreateThreadRequest,
+  CreateThreadResponse,
+  GetThreadsResponse,
+  GetThreadResponse,
+  SendMessageRequest,
+  SendMessageResponse,
+  UpdateThreadRequest,
+  UpdateThreadResponse,
+  DeleteThreadResponse,
 } from "../../../shared/types";
 import { authStorage } from "./storage";
 
@@ -342,5 +353,114 @@ export const api = {
    */
   async clearCompletedGroceries(): Promise<void> {
     await apiClient.delete("/groceries/clear-done");
+  },
+
+  // ========== THREAD API METHODS ==========
+
+  /**
+   * Create a new thread (chat workspace)
+   */
+  async createThread(title: string = "New chat"): Promise<Thread> {
+    const { data } = await apiClient.post<CreateThreadResponse>("/threads", {
+      title,
+    } as CreateThreadRequest);
+
+    if (!data.success || !data.thread) {
+      throw new Error(data.error || "Failed to create thread");
+    }
+
+    return data.thread;
+  },
+
+  /**
+   * Get all threads for the current user
+   */
+  async getAllThreads(): Promise<Thread[]> {
+    const { data } = await apiClient.get<GetThreadsResponse>("/threads");
+
+    if (!data.success || !data.threads) {
+      throw new Error(data.error || "Failed to get threads");
+    }
+
+    return data.threads;
+  },
+
+  /**
+   * Get a single thread by ID
+   */
+  async getThreadById(threadId: string): Promise<Thread> {
+    const { data } = await apiClient.get<GetThreadResponse>(
+      `/threads/${threadId}`,
+    );
+
+    if (!data.success || !data.thread) {
+      throw new Error(data.error || "Failed to get thread");
+    }
+
+    return data.thread;
+  },
+
+  /**
+   * Send a message in a thread
+   */
+  async sendMessage(
+    threadId: string,
+    message: string,
+  ): Promise<{
+    userMessage: ThreadMessage;
+    assistantMessage: ThreadMessage;
+    recipe?: Recipe;
+    recipeCreated?: boolean;
+  }> {
+    const { data } = await apiClient.post<SendMessageResponse>(
+      `/threads/${threadId}/messages`,
+      {
+        threadId,
+        message,
+      } as SendMessageRequest,
+    );
+
+    if (!data.success || !data.message || !data.assistantMessage) {
+      throw new Error(data.error || "Failed to send message");
+    }
+
+    return {
+      userMessage: data.message,
+      assistantMessage: data.assistantMessage,
+      recipe: data.recipe,
+      recipeCreated: data.recipeCreated,
+    };
+  },
+
+  /**
+   * Update a thread
+   */
+  async updateThread(
+    threadId: string,
+    updates: UpdateThreadRequest,
+  ): Promise<Thread> {
+    const { data } = await apiClient.put<UpdateThreadResponse>(
+      `/threads/${threadId}`,
+      updates,
+    );
+
+    if (!data.success || !data.thread) {
+      throw new Error(data.error || "Failed to update thread");
+    }
+
+    return data.thread;
+  },
+
+  /**
+   * Delete a thread
+   */
+  async deleteThread(threadId: string): Promise<void> {
+    const { data } = await apiClient.delete<DeleteThreadResponse>(
+      `/threads/${threadId}`,
+    );
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to delete thread");
+    }
   },
 };

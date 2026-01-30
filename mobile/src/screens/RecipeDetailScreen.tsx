@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Modal,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,8 +16,6 @@ import { RootStackParamList } from "../navigation/types";
 import { Recipe, RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
-import RecipePreviewModal from "../components/RecipePreviewModal";
-import ChatInterface from "../components/ChatInterface";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
@@ -34,26 +31,10 @@ type RecipeDetailNavigationProp = NativeStackNavigationProp<
   "RecipeDetail"
 >;
 
-interface ChatMessageWithRecipe {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-  recipe?: RecipeImport;
-}
-
-const WELCOME_MESSAGE: ChatMessageWithRecipe = {
-  id: "welcome",
-  role: "assistant",
-  content:
-    'Hi! I\'m here to help you modify this recipe.\n\nYou can ask me to:\n• "Make it less spicy"\n• "Add more vegetables"\n• "Make it vegan"\n• "Reduce cooking time"\n\nTap the recipe card below to see the current version!',
-  timestamp: new Date().toISOString(),
-};
-
 export default function RecipeDetailScreen() {
   const navigation = useNavigation<RecipeDetailNavigationProp>();
   const route = useRoute<RecipeDetailRouteProp>();
-  const { recipeId } = route.params;
+  const { recipeId, fromChat } = route.params;
 
   // Use React Query hooks
   const { data: recipe, isLoading, refetch } = useRecipe(recipeId);
@@ -63,28 +44,9 @@ export default function RecipeDetailScreen() {
   const [activeTab, setActiveTab] = useState<
     "ingredients" | "prep" | "cooking" | "shopping"
   >("ingredients");
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ChatMessageWithRecipe[]>([]);
-  const [chatMessage, setChatMessage] = useState("");
-  const [isChatting, setIsChatting] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
   const [selectedShoppingItems, setSelectedShoppingItems] = useState<
     Set<string>
   >(new Set());
-
-  useEffect(() => {
-    // Initialize chat history with welcome message and recipe
-    if (recipe && chatHistory.length === 0) {
-      const recipeAsImport = convertRecipeToImport(recipe);
-      setChatHistory([
-        {
-          ...WELCOME_MESSAGE,
-          recipe: recipeAsImport,
-        },
-      ]);
-    }
-  }, [recipe]);
 
   const convertRecipeToImport = (recipe: Recipe): RecipeImport => {
     return {
@@ -134,141 +96,18 @@ export default function RecipeDetailScreen() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!chatMessage.trim() || !recipe || isChatting) return;
-
-    const userMessage = chatMessage.trim();
-    setChatMessage("");
-    setIsChatting(true);
-
-    const newUserMessage: ChatMessageWithRecipe = {
-      id: Date.now().toString(),
-      role: "user",
-      content: userMessage,
-      timestamp: new Date().toISOString(),
-    };
-
-    setChatHistory((prev) => [...prev, newUserMessage]);
-
-    try {
-      // Build chat history in format expected by backend (exclude welcome message)
-      // Include recipe data in assistant messages so AI knows the latest version
-      const chatHistoryForAPI = chatHistory
-        .filter((msg) => msg.id !== "welcome") // Exclude welcome message
-        .map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          recipe: msg.recipe, // Include recipe data if present
-        }));
-
-      // Call API to update recipe with full chat history for context
-      const response = await api.chatWithRecipe(
-        recipe.id,
-        userMessage,
-        chatHistoryForAPI,
-      );
-
-      const recipeAsImport = convertRecipeToImport(response.recipe);
-
-      const aiMessage: ChatMessageWithRecipe = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "I've suggested changes to your recipe! Tap the card below to preview and accept/discard the changes.",
-        timestamp: new Date().toISOString(),
-        recipe: recipeAsImport,
-      };
-
-      setChatHistory((prev) => [...prev, aiMessage]);
-
-      // Check if a new preference was detected
-      if (response.preferenceAdded) {
-        Alert.alert(
-          "Preference Saved",
-          `I noticed you prefer "${response.preferenceAdded}". I've saved this to your preferences so all future recipes will follow this!`,
-          [
-            {
-              text: "View Preferences",
-              onPress: () => navigation.navigate("Preferences"),
-            },
-            { text: "OK" },
-          ],
-        );
-      }
-    } catch (error) {
-      const errorMessage: ChatMessageWithRecipe = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `Sorry, I had trouble updating the recipe. ${error instanceof Error ? error.message : "Please try again."}`,
-        timestamp: new Date().toISOString(),
-      };
-
-      setChatHistory((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsChatting(false);
-    }
-  };
-
-  const handlePreviewRecipe = (recipeData: RecipeImport) => {
-    setPreviewRecipe(recipeData);
-    setShowPreview(true);
-  };
-
-  const handleSaveRecipe = async (recipeData: RecipeImport) => {
-    if (!recipe) return;
-
-    try {
-      // Convert RecipeImport back to Recipe format for update
-      const updatedRecipe: Partial<Recipe> = {
-        title: recipeData.title,
-        description: recipeData.description,
-        servings: recipeData.servings,
-        prepTimeMinutes: recipeData.prepTimeMinutes,
-        marinateTimeMinutes: recipeData.marinateTimeMinutes,
-        cookTimeMinutes: recipeData.cookTimeMinutes,
-        category: recipeData.category,
-        tags: recipeData.tags,
-        ingredients: recipeData.ingredients,
-        preparationSteps: recipeData.preparationSteps.map((step, idx) => ({
-          stepNumber: idx + 1,
-          instruction: typeof step === "string" ? step : step.instruction,
-          completed: recipe.preparationSteps[idx]?.completed || false,
-        })),
-        cookingSteps: recipeData.cookingSteps.map((step, idx) => ({
-          stepNumber: idx + 1,
-          instruction: typeof step === "string" ? step : step.instruction,
-          completed: recipe.cookingSteps[idx]?.completed || false,
-          duration: recipe.cookingSteps[idx]?.duration,
-        })),
-      };
-
-      await updateMutation.mutateAsync({
-        recipeId: recipe.id,
-        updates: updatedRecipe,
+  const handleEditWithAI = () => {
+    // Navigate to ChatModal with the recipe's thread if it exists
+    if (recipe?.threadId) {
+      navigation.navigate("ChatModal", {
+        threadId: recipe.threadId,
+        mode: "existing",
       });
-
-      setShowPreview(false);
-      setPreviewRecipe(null);
-
-      Alert.alert(
-        "Recipe Updated!",
-        `"${recipeData.title}" has been updated successfully.`,
-        [{ text: "OK" }],
-      );
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error
-          ? error.message
-          : "Failed to update recipe. Please try again.",
-      );
+    } else {
+      // If recipe doesn't have a thread yet, create a new one
+      // (This shouldn't happen in the new flow, but handle gracefully)
+      navigation.navigate("ChatModal", { mode: "new" });
     }
-  };
-
-  const handleDiscardRecipe = () => {
-    setShowPreview(false);
-    setPreviewRecipe(null);
   };
 
   const toggleStepCompletion = (
@@ -366,43 +205,6 @@ export default function RecipeDetailScreen() {
     }
   };
 
-  const renderRecipeCard = (message: ChatMessageWithRecipe) => {
-    if (!message.recipe) return null;
-
-    const totalTime =
-      (message.recipe.prepTimeMinutes || 0) +
-      (message.recipe.cookTimeMinutes || 0);
-
-    return (
-      <TouchableOpacity
-        style={styles.recipeCard}
-        onPress={() => handlePreviewRecipe(message.recipe!)}
-      >
-        <Text style={styles.recipeCardTitle}>{message.recipe.title}</Text>
-
-        {message.recipe.description && (
-          <Text style={styles.recipeCardDescription} numberOfLines={2}>
-            {message.recipe.description}
-          </Text>
-        )}
-
-        <View style={styles.recipeCardMeta}>
-          {message.recipe.servings && (
-            <Text style={styles.recipeCardMetaItem}>
-              {message.recipe.servings} servings
-            </Text>
-          )}
-          {totalTime > 0 && <Text style={styles.recipeCardMetaItem}>•</Text>}
-          {totalTime > 0 && (
-            <Text style={styles.recipeCardMetaItem}>{totalTime} min</Text>
-          )}
-        </View>
-
-        <Text style={styles.recipeCardCTA}>Tap to review</Text>
-      </TouchableOpacity>
-    );
-  };
-
   if (isLoading) {
     return <Loader text="Loading recipe..." />;
   }
@@ -415,25 +217,25 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  const currentRecipe = convertRecipeToImport(recipe);
-
   return (
     <View style={styles.container}>
       <Header
         showBack={true}
         rightActions={
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.aiButton}
-              onPress={() => setShowChatModal(true)}
-            >
-              <Ionicons
-                name="sparkles-outline"
-                size={16}
-                color={Colors.primary}
-              />
-              <Text style={styles.aiButtonText}>Edit with AI</Text>
-            </TouchableOpacity>
+            {!fromChat && (
+              <TouchableOpacity
+                style={styles.aiButton}
+                onPress={handleEditWithAI}
+              >
+                <Ionicons
+                  name="sparkles-outline"
+                  size={16}
+                  color={Colors.primary}
+                />
+                <Text style={styles.aiButtonText}>Edit with AI</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.iconButton}
               onPress={handleToggleFavorite}
@@ -610,7 +412,7 @@ export default function RecipeDetailScreen() {
                       </Text>
                       {step.duration && (
                         <Text style={styles.stepDuration}>
-                          {step.duration}m
+                          {step.duration}
                         </Text>
                       )}
                     </View>
@@ -703,40 +505,6 @@ export default function RecipeDetailScreen() {
           )}
         </View>
       </ScrollView>
-
-      <Modal
-        visible={showChatModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <Header
-            title={`Edit: ${recipe.title}`}
-            subtitle="Ask AI to modify your recipe"
-            showClose={true}
-            onClose={() => setShowChatModal(false)}
-          />
-
-          <ChatInterface
-            chatHistory={chatHistory}
-            userMessage={chatMessage}
-            isGenerating={isChatting}
-            placeholder="Ask AI to modify your recipe..."
-            onMessageChange={setChatMessage}
-            onSendMessage={handleSendMessage}
-            renderMessageExtras={renderRecipeCard}
-          />
-
-          {showPreview && previewRecipe && (
-            <RecipePreviewModal
-              recipe={previewRecipe}
-              visible={showPreview}
-              onSave={handleSaveRecipe}
-              onDiscard={handleDiscardRecipe}
-            />
-          )}
-        </View>
-      </Modal>
     </View>
   );
 }

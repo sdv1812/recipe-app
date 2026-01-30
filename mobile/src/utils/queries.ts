@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { Recipe, RecipeImport, GroceryItem } from "../../../shared/types";
+import {
+  Recipe,
+  RecipeImport,
+  GroceryItem,
+  Thread,
+  ThreadMessage,
+} from "../../../shared/types";
 
 // Query Keys
 export const queryKeys = {
@@ -8,6 +14,8 @@ export const queryKeys = {
   recipe: (id: string) => ["recipes", id] as const,
   user: ["user"] as const,
   groceries: ["groceries"] as const,
+  threads: ["threads"] as const,
+  thread: (id: string) => ["threads", id] as const,
 };
 
 // Queries
@@ -289,6 +297,100 @@ export function useClearCompletedGroceries() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
+    },
+  });
+}
+
+// ========== THREAD QUERIES & MUTATIONS ==========
+
+export function useThreads() {
+  return useQuery({
+    queryKey: queryKeys.threads,
+    queryFn: () => api.getAllThreads(),
+  });
+}
+
+export function useThread(threadId: string) {
+  return useQuery({
+    queryKey: queryKeys.thread(threadId),
+    queryFn: () => api.getThreadById(threadId),
+    enabled: !!threadId,
+  });
+}
+
+export function useCreateThread() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (title?: string) => api.createThread(title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads });
+    },
+  });
+}
+
+export function useSendMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      threadId,
+      message,
+    }: {
+      threadId: string;
+      message: string;
+    }) => api.sendMessage(threadId, message),
+    onSuccess: (data, variables) => {
+      // Invalidate the specific thread to show new messages
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.thread(variables.threadId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads });
+
+      // If a recipe was created/updated, invalidate recipes
+      if (data.recipe) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.recipes });
+        if (data.recipe.id) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.recipe(data.recipe.id),
+          });
+        }
+      }
+    },
+  });
+}
+
+export function useUpdateThread() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      threadId,
+      updates,
+    }: {
+      threadId: string;
+      updates: {
+        title?: string;
+        status?: "draft" | "recipe_created" | "archived";
+        recipeId?: string;
+      };
+    }) => api.updateThread(threadId, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.thread(variables.threadId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads });
+    },
+  });
+}
+
+export function useDeleteThread() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (threadId: string) => api.deleteThread(threadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.threads });
     },
   });
 }

@@ -1,5 +1,11 @@
 import { MongoClient, Db, Collection } from "mongodb";
-import { Recipe, User, ShareToken, GroceryItem } from "../../shared/types";
+import {
+  Recipe,
+  User,
+  ShareToken,
+  GroceryItem,
+  Thread,
+} from "../../shared/types";
 import { UserDocument } from "./types";
 
 let cachedClient: MongoClient | null = null;
@@ -61,6 +67,11 @@ export async function getGroceriesCollection(): Promise<
 > {
   const { db } = await connectToDatabase();
   return db.collection<GroceryItem>("groceries");
+}
+
+export async function getThreadsCollection(): Promise<Collection<Thread>> {
+  const { db } = await connectToDatabase();
+  return db.collection<Thread>("threads");
 }
 
 // Grocery List Functions

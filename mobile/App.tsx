@@ -7,8 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootStackParamList, TabParamList } from "./src/navigation/types";
 import HomeScreen from "./src/screens/HomeScreen";
-import AddRecipeScreen from "./src/screens/AddRecipeScreen";
 import RecipeDetailScreen from "./src/screens/RecipeDetailScreen";
+import ChatModalScreen from "./src/screens/ChatModalScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
 import PreferencesScreen from "./src/screens/PreferencesScreen";
@@ -56,22 +56,11 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
     >
       <Tab.Screen
         name="MyRecipes"
+        component={HomeScreen}
         options={{
           tabBarLabel: "My Recipes",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book-outline" size={size} color={color} />
-          ),
-        }}
-      >
-        {(props) => <HomeScreen {...props} />}
-      </Tab.Screen>
-      <Tab.Screen
-        name="AIChef"
-        component={AddRecipeScreen}
-        options={{
-          tabBarLabel: "AI Chef",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sparkles-outline" size={size} color={color} />
           ),
         }}
       />
@@ -98,8 +87,11 @@ function MainTabs({ onLogout }: { onLogout: () => void }) {
           tabPress: (e) => {
             // Prevent default navigation
             e.preventDefault();
-            // Navigate to Settings modal instead
-            navigation.navigate("Settings");
+            // Navigate to Settings modal instead (use parent navigator)
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.navigate("Settings" as never);
+            }
           },
         })}
       />
@@ -182,6 +174,15 @@ export default function App() {
                 options={{
                   presentation: "modal",
                   animation: "slide_from_bottom",
+                }}
+              />
+              <Stack.Screen
+                name="ChatModal"
+                component={ChatModalScreen}
+                options={{
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                  headerShown: false,
                 }}
               />
               <Stack.Screen

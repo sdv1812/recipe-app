@@ -1,10 +1,9 @@
 import { Recipe } from "../../../shared/types";
 import { NavigatorScreenParams } from "@react-navigation/native";
 
-// Bottom Tab Navigator
+// Bottom Tab Navigator (3 tabs: Recipes, Groceries, More)
 export type TabParamList = {
   MyRecipes: undefined;
-  AIChef: undefined;
   Groceries: undefined;
   More: undefined;
 };
@@ -14,7 +13,8 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
-  RecipeDetail: { recipeId: string };
+  RecipeDetail: { recipeId: string; fromChat?: boolean };
+  ChatModal: { threadId?: string; mode: "new" | "existing" }; // New chat modal
   Preferences: undefined;
   Settings: undefined;
   ImportJson: undefined;
