@@ -199,7 +199,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "Sorry, I had trouble saving that recipe. Please try again.";
       }
     }
-    // Scenario 3: User wants to modify existing recipe
+    // Scenario 3: User mentions modification while waiting for save confirmation (before recipe is saved)
+    // This handles cases like "I don't have cumin" after AI showed recipe text
+    else if (waitingForSaveConfirmation && !userConfirmedSave && wantsRecipe) {
+      // User wants to modify the proposed recipe before saving - regenerate recipe text
+      try {
+        assistantContent = await getRecipeTextResponse(message, chatHistory);
+      } catch (error) {
+        console.error("Recipe re-generation text error:", error);
+        assistantContent =
+          "Sorry, I had trouble generating that recipe. Please try again.";
+      }
+    }
+    // Scenario 4: User wants to modify existing recipe
     else if (wantsRecipe && hasExistingRecipe && existingRecipe) {
       // Recipe already exists - generate modification in TEXT format with update prompt
       try {
@@ -215,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "Sorry, I had trouble generating that modification. Please try again.";
       }
     }
-    // Scenario 4: User wants a new recipe (initial request)
+    // Scenario 5: User wants a new recipe (initial request)
     else if (wantsRecipe) {
       // Generate recipe in TEXT format with save prompt
       try {
@@ -226,7 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "Sorry, I had trouble generating that recipe. Please try again.";
       }
     }
-    // Scenario 5: Recipe exists but message isn't clearly recipe-related (fallback for modifications)
+    // Scenario 6: Recipe exists but message isn't clearly recipe-related (fallback for modifications)
     // This catches cases like "remove sugar" or "can you add ginger" that might not trigger keywords
     else if (
       hasExistingRecipe &&
@@ -248,7 +260,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         assistantContent = chatResponse;
       }
     }
-    // Scenario 6: Just chatting
+    // Scenario 7: Waiting for save confirmation but user is just chatting (no recipe keywords)
+    // This prevents casual responses from triggering recipe regeneration
+    else if (waitingForSaveConfirmation && !userConfirmedSave && !wantsRecipe) {
+      // User said something that's not a confirmation and not recipe-related
+      // Just respond conversationally
+      assistantContent = chatResponse;
+    }
+    // Scenario 8: Just chatting
     else {
       assistantContent = chatResponse;
     }
