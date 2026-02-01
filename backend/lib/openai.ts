@@ -87,10 +87,115 @@ RULES:
   return completion.choices[0].message.content || "";
 }
 
+export async function getRecipeTextResponse(
+  message: string,
+  chatHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+): Promise<string> {
+  const openai = getOpenAIClient();
+
+  const systemPrompt = `You are SousAI, a professional chef and cooking assistant.
+
+When users ask for a recipe or describe food they want to cook, provide a detailed recipe in a conversational, readable text format.
+
+Include:
+- Recipe title and brief description
+- Servings and cooking time
+- List of ingredients with quantities
+- Step-by-step preparation and cooking instructions
+
+Format the recipe in a natural, easy-to-read way. Use clear paragraph breaks and bullet points where helpful.
+
+IMPORTANT: After providing the complete recipe, ALWAYS end your response by asking:
+"Would you like me to save this recipe to your collection?"
+
+Keep the tone friendly and professional.`;
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: systemPrompt,
+    },
+    ...chatHistory.map((msg) => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    })),
+    {
+      role: "user",
+      content: message,
+    },
+  ];
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages,
+    temperature: 0.7,
+    max_tokens: 800,
+  });
+
+  return completion.choices[0].message.content || "";
+}
+
+export async function getRecipeModificationTextResponse(
+  message: string,
+  currentRecipeTitle: string,
+  chatHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+): Promise<string> {
+  const openai = getOpenAIClient();
+
+  const systemPrompt = `You are SousAI, a professional chef helping users modify their saved recipe: "${currentRecipeTitle}".
+
+The user is requesting changes to this recipe. Provide the MODIFIED recipe in a conversational, readable text format based on their request.
+
+Include:
+- Updated recipe title (if name changed) and description
+- Servings and cooking time
+- Complete list of ingredients with quantities (showing what changed)
+- Updated step-by-step preparation and cooking instructions
+
+Format the modified recipe in a natural, easy-to-read way. Use clear paragraph breaks and bullet points.
+
+CRITICAL RULE - YOU MUST FOLLOW THIS:
+After providing the complete modified recipe, you MUST ALWAYS end your response with this EXACT question:
+"Would you like me to update your saved recipe with these changes?"
+
+Do NOT skip this question. Do NOT rephrase it. Ask it EXACTLY as written above.
+
+Keep the tone friendly and professional.`;
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: systemPrompt,
+    },
+    ...chatHistory.map((msg) => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    })),
+    {
+      role: "user",
+      content: message,
+    },
+  ];
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages,
+    temperature: 0.7,
+    max_tokens: 800,
+  });
+
+  return completion.choices[0].message.content || "";
+}
+
 export async function getChatResponse(
   message: string,
   chatHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
-): Promise<{ response: string; wantsRecipe: boolean }> {
+): Promise<{
+  response: string;
+  wantsRecipe: boolean;
+  userConfirmedSave: boolean;
+  userConfirmedUpdate: boolean;
+}> {
   const openai = getOpenAIClient();
 
   const systemPrompt = `You are SousAI, a helpful cooking assistant. Your main purpose is to help users create recipes, but you can also have friendly conversations.
@@ -124,7 +229,7 @@ Keep responses concise and friendly. Don't be overly formal.`;
 
   const response = completion.choices[0].message.content || "";
 
-  // Simple heuristic: check if user message contains recipe-related keywords
+  // Check if user message contains recipe-related keywords
   const recipeKeywords = [
     "recipe",
     "cook",
@@ -144,14 +249,56 @@ Keep responses concise and friendly. Don't be overly formal.`;
     "soup",
     "vegetarian",
     "vegan",
+    "without",
+    "substitute",
+    "replace",
+    "instead of",
+    // Modification keywords
+    "remove",
+    "add",
+    "change",
+    "modify",
+    "update",
+    "less",
+    "more",
+    "extra",
+    "skip",
+    "omit",
+    "use",
+    "try",
+    "swap",
+    "different",
   ];
 
-  const messageLower = message.toLowerCase();
+  // Check if user is confirming to save a recipe
+  const confirmKeywords = [
+    "yes",
+    "yeah",
+    "sure",
+    "ok",
+    "okay",
+    "save it",
+    "save this",
+    "save the recipe",
+    "please save",
+    "go ahead",
+    "sounds good",
+    "that works",
+    "perfect",
+  ];
+
+  const messageLower = message.toLowerCase().trim();
   const wantsRecipe = recipeKeywords.some((keyword) =>
     messageLower.includes(keyword),
   );
+  const userConfirmedSave = confirmKeywords.some((keyword) =>
+    messageLower.includes(keyword),
+  );
+  const userConfirmedUpdate = confirmKeywords.some((keyword) =>
+    messageLower.includes(keyword),
+  );
 
-  return { response, wantsRecipe };
+  return { response, wantsRecipe, userConfirmedSave, userConfirmedUpdate };
 }
 
 export async function updateRecipeWithChat(

@@ -10,7 +10,12 @@ import {
   ShoppingItem,
 } from "../../../../shared/types";
 import { requireAuth, unauthorizedResponse } from "../../../lib/auth";
-import { generateRecipe, getChatResponse } from "../../../lib/openai";
+import {
+  generateRecipe,
+  getChatResponse,
+  getRecipeTextResponse,
+  getRecipeModificationTextResponse,
+} from "../../../lib/openai";
 import { detectPreference } from "../../../lib/preferenceDetection";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -75,27 +80,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         content: msg.content,
       }));
 
-    // First, check if the user wants a recipe or just wants to chat
-    const { response: chatResponse, wantsRecipe } = await getChatResponse(
-      message,
-      chatHistory,
+    // Check what the user wants
+    const {
+      response: chatResponse,
+      wantsRecipe,
+      userConfirmedSave,
+      userConfirmedUpdate,
+    } = await getChatResponse(message, chatHistory);
+
+    // Check if the last assistant message was asking for save/update confirmation
+    const lastAssistantMessage = thread.messages
+      .filter((msg) => msg.role === "assistant")
+      .pop();
+    const waitingForSaveConfirmation = lastAssistantMessage?.content.includes(
+      "Would you like me to save this recipe",
     );
+    const waitingForUpdateConfirmation = lastAssistantMessage?.content.includes(
+      "Would you like me to update your saved recipe",
+    );
+
+    // Check if thread already has a saved recipe
+    const hasExistingRecipe = !!thread.recipeId;
+
+    // Get existing recipe for context
+    let existingRecipe: Recipe | null = null;
+    if (hasExistingRecipe) {
+      existingRecipe = await recipes.findOne({
+        id: thread.recipeId,
+        userId,
+      });
+    }
 
     let recipeData: RecipeImport | null = null;
     let assistantContent = "";
     let parseError = false;
 
-    // If the message seems like a recipe request, try to generate a recipe
-    if (wantsRecipe) {
+    // Scenario 1: User confirmed update and we were waiting for update confirmation
+    if (userConfirmedUpdate && waitingForUpdateConfirmation) {
+      // User said yes/sure - update existing recipe with JSON from conversation
       try {
         const chatContext = thread.messages
           .map((msg) => `${msg.role}: ${msg.content}`)
           .join("\n");
 
-        let prompt = message;
-        if (thread.messages.length > 0) {
-          prompt = `Previous conversation:\n${chatContext}\n\nUser: ${message}`;
-        }
+        const prompt = `Based on the following conversation, generate the UPDATED recipe in JSON format:\n\n${chatContext}\n\nUser: ${message}`;
 
         const aiResponse = await generateRecipe(prompt);
 
@@ -108,29 +136,120 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Validate it's a recipe (must have title and ingredients)
             if (parsedData?.title && parsedData?.ingredients?.length > 0) {
               recipeData = parsedData;
-              assistantContent = "I've created a recipe for you!";
-            } else {
-              // AI returned JSON but it's not a valid recipe
               assistantContent =
-                "I generated something but it doesn't look like a complete recipe. Could you be more specific about what you'd like to cook?";
+                "Perfect! I've updated your recipe with the changes. Check it out!";
+            } else {
+              assistantContent =
+                "I had trouble updating that recipe. Could you describe the changes again?";
             }
           } else {
-            // No JSON found in response
             assistantContent =
-              "I had trouble formatting that as a recipe. Could you describe what you'd like to cook more specifically?";
+              "I couldn't update the recipe. Could you describe the changes again?";
           }
         } catch (error) {
           parseError = true;
           assistantContent =
-            "I couldn't format that as a recipe. Could you try rephrasing your request?";
+            "Sorry, I had trouble updating the recipe. Please try describing the changes again.";
+        }
+      } catch (error) {
+        console.error("Recipe update error:", error);
+        assistantContent =
+          "Sorry, I had trouble updating that recipe. Please try again.";
+      }
+    }
+    // Scenario 2: User confirmed save and we were waiting for save confirmation
+    else if (userConfirmedSave && waitingForSaveConfirmation) {
+      // User said yes/sure/save it - generate JSON recipe from conversation
+      try {
+        const chatContext = thread.messages
+          .map((msg) => `${msg.role}: ${msg.content}`)
+          .join("\n");
+
+        const prompt = `Based on the following conversation, generate a complete recipe in JSON format:\n\n${chatContext}\n\nUser: ${message}`;
+
+        const aiResponse = await generateRecipe(prompt);
+
+        // Try to parse as recipe
+        try {
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedData = JSON.parse(jsonMatch[0]);
+
+            // Validate it's a recipe (must have title and ingredients)
+            if (parsedData?.title && parsedData?.ingredients?.length > 0) {
+              recipeData = parsedData;
+              assistantContent =
+                "Great! I've saved the recipe to your collection. You can view and edit it anytime!";
+            } else {
+              assistantContent =
+                "I had trouble saving that recipe. Could you describe it again?";
+            }
+          } else {
+            assistantContent =
+              "I couldn't save the recipe. Could you describe what you'd like to cook again?";
+          }
+        } catch (error) {
+          parseError = true;
+          assistantContent =
+            "Sorry, I had trouble saving the recipe. Please try describing it again.";
         }
       } catch (error) {
         console.error("Recipe generation error:", error);
         assistantContent =
+          "Sorry, I had trouble saving that recipe. Please try again.";
+      }
+    }
+    // Scenario 3: User wants to modify existing recipe
+    else if (wantsRecipe && hasExistingRecipe && existingRecipe) {
+      // Recipe already exists - generate modification in TEXT format with update prompt
+      try {
+        const recipeTitle = existingRecipe.title || "your recipe";
+        assistantContent = await getRecipeModificationTextResponse(
+          message,
+          recipeTitle,
+          chatHistory,
+        );
+      } catch (error) {
+        console.error("Recipe modification text generation error:", error);
+        assistantContent =
+          "Sorry, I had trouble generating that modification. Please try again.";
+      }
+    }
+    // Scenario 4: User wants a new recipe (initial request)
+    else if (wantsRecipe) {
+      // Generate recipe in TEXT format with save prompt
+      try {
+        assistantContent = await getRecipeTextResponse(message, chatHistory);
+      } catch (error) {
+        console.error("Recipe text generation error:", error);
+        assistantContent =
           "Sorry, I had trouble generating that recipe. Please try again.";
       }
-    } else {
-      // User is just chatting, use conversational response
+    }
+    // Scenario 5: Recipe exists but message isn't clearly recipe-related (fallback for modifications)
+    // This catches cases like "remove sugar" or "can you add ginger" that might not trigger keywords
+    else if (
+      hasExistingRecipe &&
+      existingRecipe &&
+      !waitingForSaveConfirmation &&
+      !waitingForUpdateConfirmation
+    ) {
+      // Assume it's a modification request since a recipe already exists
+      try {
+        const recipeTitle = existingRecipe.title || "your recipe";
+        assistantContent = await getRecipeModificationTextResponse(
+          message,
+          recipeTitle,
+          chatHistory,
+        );
+      } catch (error) {
+        console.error("Recipe modification fallback error:", error);
+        // If modification fails, fall back to chat response
+        assistantContent = chatResponse;
+      }
+    }
+    // Scenario 6: Just chatting
+    else {
       assistantContent = chatResponse;
     }
 

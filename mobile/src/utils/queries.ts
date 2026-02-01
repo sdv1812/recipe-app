@@ -317,6 +317,44 @@ export function useSendMessage() {
       threadId: string;
       message: string;
     }) => api.sendMessage(threadId, message),
+    // Optimistic update: show user message immediately
+    onMutate: async ({ threadId, message }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.thread(threadId) });
+
+      // Snapshot the previous thread state
+      const previousThread = queryClient.getQueryData<Thread>(
+        queryKeys.thread(threadId),
+      );
+
+      // Optimistically add the user message
+      if (previousThread) {
+        const optimisticUserMessage: ThreadMessage = {
+          id: `temp-${Date.now()}`, // Temporary ID
+          threadId,
+          role: "user",
+          content: message,
+          timestamp: new Date().toISOString(),
+        };
+
+        queryClient.setQueryData<Thread>(queryKeys.thread(threadId), {
+          ...previousThread,
+          messages: [...previousThread.messages, optimisticUserMessage],
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return { previousThread };
+    },
+    // Rollback on error
+    onError: (err, variables, context) => {
+      if (context?.previousThread) {
+        queryClient.setQueryData(
+          queryKeys.thread(variables.threadId),
+          context.previousThread,
+        );
+      }
+    },
     onSuccess: (data, variables) => {
       // Invalidate the specific thread to show new messages
       queryClient.invalidateQueries({
