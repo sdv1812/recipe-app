@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Markdown from "react-native-markdown-display";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -137,9 +138,81 @@ export default function ChatModalScreen({ route, navigation }: Props) {
             isUser ? styles.userBubble : styles.assistantBubble,
           ]}
         >
-          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-            {message.content}
-          </Text>
+          {isUser ? (
+            <Text style={[styles.messageText, styles.userMessageText]}>
+              {message.content}
+            </Text>
+          ) : (
+            <Markdown
+              style={{
+                body: {
+                  color: Colors.text.primary,
+                  fontSize: Typography.size.base,
+                  lineHeight:
+                    Typography.size.base * Typography.lineHeight.normal,
+                },
+                heading1: {
+                  fontSize: Typography.size.xl,
+                  fontWeight: Typography.weight.bold,
+                  color: Colors.text.primary,
+                  marginTop: Spacing.sm,
+                  marginBottom: Spacing.xs,
+                },
+                heading2: {
+                  fontSize: Typography.size.lg,
+                  fontWeight: Typography.weight.semibold,
+                  color: Colors.text.primary,
+                  marginTop: Spacing.sm,
+                  marginBottom: Spacing.xs,
+                },
+                heading3: {
+                  fontSize: Typography.size.base,
+                  fontWeight: Typography.weight.semibold,
+                  color: Colors.text.primary,
+                  marginTop: Spacing.xs,
+                  marginBottom: Spacing.xs,
+                },
+                strong: {
+                  fontWeight: Typography.weight.bold,
+                  color: Colors.text.primary,
+                },
+                em: {
+                  fontStyle: "italic",
+                },
+                paragraph: {
+                  marginTop: 0,
+                  marginBottom: Spacing.sm,
+                },
+                bullet_list: {
+                  marginTop: Spacing.xs,
+                  marginBottom: Spacing.sm,
+                },
+                ordered_list: {
+                  marginTop: Spacing.xs,
+                  marginBottom: Spacing.sm,
+                },
+                list_item: {
+                  marginBottom: Spacing.xs,
+                },
+                code_inline: {
+                  backgroundColor: Colors.background,
+                  color: Colors.primary,
+                  paddingHorizontal: 4,
+                  paddingVertical: 2,
+                  borderRadius: 4,
+                  fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+                },
+                fence: {
+                  backgroundColor: Colors.background,
+                  padding: Spacing.sm,
+                  borderRadius: BorderRadius.md,
+                  marginVertical: Spacing.xs,
+                },
+              }}
+            >
+              {message.content}
+            </Markdown>
+          )}
 
           {message.error && (
             <Text style={styles.errorText}>
