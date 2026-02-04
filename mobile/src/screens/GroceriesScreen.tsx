@@ -20,6 +20,7 @@ import {
   useClearCompletedGroceries,
   useDeleteGroceryItem,
   useAddToGroceries,
+  useUpdateGroceryItem,
 } from "../utils/queries";
 import { GroceryItem } from "../../../shared/types";
 
@@ -29,8 +30,10 @@ export default function GroceriesScreen() {
   const clearMutation = useClearCompletedGroceries();
   const deleteMutation = useDeleteGroceryItem();
   const addMutation = useAddToGroceries();
+  const updateMutation = useUpdateGroceryItem();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
   const [itemName, setItemName] = useState("");
   const [itemQuantity, setItemQuantity] = useState("");
   const [itemUnit, setItemUnit] = useState("");
@@ -42,15 +45,31 @@ export default function GroceriesScreen() {
     toggleMutation.mutate(itemId);
   };
 
-  const handleDelete = (itemId: string, itemName: string) => {
-    Alert.alert("Delete Item", `Remove "${itemName}" from groceries?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => deleteMutation.mutate(itemId),
-      },
-    ]);
+  const handleDelete = (item: GroceryItem) => {
+    Alert.alert(
+      "Grocery Item",
+      `What would you like to do with "${item.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Edit",
+          onPress: () => handleEdit(item),
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(item.id),
+        },
+      ],
+    );
+  };
+
+  const handleEdit = (item: GroceryItem) => {
+    setEditingItem(item);
+    setItemName(item.name);
+    setItemQuantity(item.quantity || "");
+    setItemUnit(item.unit || "");
+    setShowAddModal(true);
   };
 
   const handleClearCompleted = () => {
@@ -77,34 +96,60 @@ export default function GroceriesScreen() {
     }
 
     try {
-      await addMutation.mutateAsync({
-        items: [
-          {
+      if (editingItem) {
+        // Update existing item
+        await updateMutation.mutateAsync({
+          itemId: editingItem.id,
+          updates: {
             name: itemName.trim(),
             quantity: itemQuantity.trim() || undefined,
             unit: itemUnit.trim() || undefined,
           },
-        ],
-      });
+        });
+      } else {
+        // Add new item
+        await addMutation.mutateAsync({
+          items: [
+            {
+              name: itemName.trim(),
+              quantity: itemQuantity.trim() || undefined,
+              unit: itemUnit.trim() || undefined,
+            },
+          ],
+        });
+      }
 
       // Reset form and close modal
       setItemName("");
       setItemQuantity("");
       setItemUnit("");
+      setEditingItem(null);
       setShowAddModal(false);
     } catch (error) {
       Alert.alert(
         "Error",
-        error instanceof Error ? error.message : "Failed to add item",
+        error instanceof Error
+          ? error.message
+          : editingItem
+            ? "Failed to update item"
+            : "Failed to add item",
       );
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setEditingItem(null);
+    setItemName("");
+    setItemQuantity("");
+    setItemUnit("");
   };
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <TouchableOpacity
       style={styles.groceryItem}
       onPress={() => handleToggle(item.id)}
-      onLongPress={() => handleDelete(item.id, item.name)}
+      onLongPress={() => handleDelete(item)}
     >
       <View style={styles.checkbox}>
         <Text style={styles.checkboxText}>{item.completed ? "✓" : ""}</Text>
@@ -198,7 +243,7 @@ export default function GroceriesScreen() {
         visible={showAddModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowAddModal(false)}
+        onRequestClose={handleCloseModal}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -207,8 +252,10 @@ export default function GroceriesScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Grocery Item</Text>
-                <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Text style={styles.modalTitle}>
+                  {editingItem ? "Edit Grocery Item" : "Add Grocery Item"}
+                </Text>
+                <TouchableOpacity onPress={handleCloseModal}>
                   <Text style={styles.modalCloseButton}>Close</Text>
                 </TouchableOpacity>
               </View>
@@ -251,15 +298,27 @@ export default function GroceriesScreen() {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.cancelButton}
-                  onPress={() => setShowAddModal(false)}
+                  onPress={handleCloseModal}
+                  disabled={addMutation.isPending || updateMutation.isPending}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[
+                    styles.saveButton,
+                    (addMutation.isPending || updateMutation.isPending) &&
+                      styles.saveButtonDisabled,
+                  ]}
                   onPress={handleAddItem}
+                  disabled={addMutation.isPending || updateMutation.isPending}
                 >
-                  <Text style={styles.saveButtonText}>Add Item</Text>
+                  {addMutation.isPending || updateMutation.isPending ? (
+                    <Text style={styles.saveButtonText}>Saving...</Text>
+                  ) : (
+                    <Text style={styles.saveButtonText}>
+                      {editingItem ? "Update Item" : "Add Item"}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -463,6 +522,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.primary,
     alignItems: "center",
+  },
+  saveButtonDisabled: {
+    backgroundColor: Colors.border,
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: Typography.size.base,

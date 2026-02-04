@@ -2,6 +2,7 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireAuth, unauthorizedResponse } from "../../lib/auth";
 import {
   toggleGroceryItem,
+  updateGroceryItem,
   deleteGroceryItem,
   clearCompletedGroceries,
 } from "../../lib/db";
@@ -47,6 +48,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error instanceof Error
             ? error.message
             : "Failed to toggle grocery item",
+      });
+    }
+  }
+
+  // PATCH - Update grocery item details
+  if (req.method === "PATCH") {
+    try {
+      const { name, quantity, unit } = req.body;
+      const result = await updateGroceryItem(userId, id, {
+        name,
+        quantity,
+        unit,
+      });
+      return res.status(200).json({ success: true, item: result });
+    } catch (error) {
+      console.error("Error updating grocery item:", error);
+      return res.status(500).json({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update grocery item",
       });
     }
   }

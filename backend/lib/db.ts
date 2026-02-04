@@ -149,6 +149,28 @@ export async function toggleGroceryItem(
   return { ...item, ...updateData };
 }
 
+export async function updateGroceryItem(
+  userId: string,
+  itemId: string,
+  updates: { name?: string; quantity?: string; unit?: string },
+): Promise<GroceryItem> {
+  const groceries = await getGroceriesCollection();
+
+  const item = await groceries.findOne({ id: itemId, userId });
+  if (!item) {
+    throw new Error("Grocery item not found");
+  }
+
+  const updateData: any = {
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await groceries.updateOne({ id: itemId, userId }, { $set: updateData });
+
+  return { ...item, ...updateData };
+}
+
 export async function deleteGroceryItem(
   userId: string,
   itemId: string,

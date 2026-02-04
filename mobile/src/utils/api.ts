@@ -283,7 +283,19 @@ export const api = {
     const { data } = await apiClient.put(`/groceries/${itemId}`);
     return data;
   },
-
+  /**
+   * Update grocery item details
+   */
+  async updateGroceryItem(
+    itemId: string,
+    updates: { name?: string; quantity?: string; unit?: string },
+  ): Promise<GroceryItem> {
+    const { data } = await apiClient.patch(`/groceries/${itemId}`, updates);
+    if (!data.success || !data.item) {
+      throw new Error(data.error || "Failed to update grocery item");
+    }
+    return data.item;
+  },
   /**
    * Delete a grocery item
    */

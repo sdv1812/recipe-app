@@ -210,6 +210,23 @@ export function useToggleGroceryItem() {
   });
 }
 
+export function useUpdateGroceryItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      updates,
+    }: {
+      itemId: string;
+      updates: { name?: string; quantity?: string; unit?: string };
+    }) => api.updateGroceryItem(itemId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.groceries });
+    },
+  });
+}
+
 export function useDeleteGroceryItem() {
   const queryClient = useQueryClient();
 
