@@ -8,22 +8,27 @@ import {
   RefreshControl,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe, Thread } from "../../../shared/types";
+import { Recipe, Thread, RecipeImport } from "../../../shared/types";
 import { formatTime } from "../utils/timeFormatter";
 import {
   useRecipes,
   useDeleteRecipe,
   useThreads,
   useDeleteThread,
+  useCreateRecipe,
 } from "../utils/queries";
+import { api } from "../utils/api";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
+import RecipePreviewModal from "../components/RecipePreviewModal";
 import {
   Colors,
   Typography,
@@ -44,6 +49,9 @@ export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
   const [viewMode, setViewMode] = useState<ViewMode>("recipes");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedRecipe, setScannedRecipe] = useState<RecipeImport | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Use React Query hooks
   const { data: recipes = [], isLoading, isFetching, refetch } = useRecipes();
@@ -54,6 +62,7 @@ export default function HomeScreen() {
   } = useThreads();
   const deleteMutation = useDeleteRecipe();
   const deleteThreadMutation = useDeleteThread();
+  const createRecipeMutation = useCreateRecipe();
 
   const handleDeleteRecipe = (recipeId: string) => {
     Alert.alert(
@@ -179,6 +188,105 @@ export default function HomeScreen() {
 
   const handleOpenDraft = (threadId: string) => {
     navigation.navigate("ChatModal", { threadId, mode: "existing" });
+  };
+
+  const handleScanRecipe = async () => {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Please allow access to your photos to scan recipes.",
+      );
+      return;
+    }
+
+    // Show picker options
+    Alert.alert("Scan Recipe", "Choose how to add your recipe photo", [
+      {
+        text: "Take Photo",
+        onPress: handleTakePhoto,
+      },
+      {
+        text: "Choose from Gallery",
+        onPress: handlePickImage,
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]);
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Please allow camera access to take photos.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      processRecipeImage(result.assets[0].base64);
+    }
+  };
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      processRecipeImage(result.assets[0].base64);
+    }
+  };
+
+  const processRecipeImage = async (base64Image: string) => {
+    setIsScanning(true);
+    try {
+      const imageData = `data:image/jpeg;base64,${base64Image}`;
+      const recipe = await api.scanRecipeImage(imageData);
+      setScannedRecipe(recipe);
+      setShowPreview(true);
+    } catch (error) {
+      Alert.alert(
+        "Scan Failed",
+        error instanceof Error
+          ? error.message
+          : "Could not scan recipe. Please try again.",
+      );
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleSaveScannedRecipe = async (recipe: RecipeImport) => {
+    try {
+      await createRecipeMutation.mutateAsync(recipe);
+      setShowPreview(false);
+      setScannedRecipe(null);
+      Alert.alert("Success", "Recipe saved successfully!");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to save recipe",
+      );
+    }
+  };
+
+  const handleDiscardScannedRecipe = () => {
+    setShowPreview(false);
+    setScannedRecipe(null);
   };
 
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
@@ -520,6 +628,17 @@ export default function HomeScreen() {
       {/* Bottom Composer */}
       <View style={styles.composerContainer}>
         <TouchableOpacity
+          style={styles.scanButton}
+          onPress={handleScanRecipe}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.composer}
           onPress={handleOpenNewChat}
           activeOpacity={0.8}
@@ -538,6 +657,16 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* Recipe Preview Modal */}
+      {scannedRecipe && (
+        <RecipePreviewModal
+          recipe={scannedRecipe}
+          visible={showPreview}
+          onSave={handleSaveScannedRecipe}
+          onDiscard={handleDiscardScannedRecipe}
+        />
+      )}
     </View>
   );
 }
@@ -752,8 +881,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xl,
+    flexDirection: "row",
+    gap: Spacing.sm,
+    alignItems: "center",
+  },
+  scanButton: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: "center",
+    alignItems: "center",
   },
   composer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.background,

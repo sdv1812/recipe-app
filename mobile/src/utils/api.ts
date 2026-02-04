@@ -418,4 +418,19 @@ export const api = {
       throw new Error(data.error || "Failed to delete thread");
     }
   },
+
+  /**
+   * Scan a recipe image using OCR and AI
+   */
+  async scanRecipeImage(imageData: string): Promise<RecipeImport> {
+    const { data } = await apiClient.post("/recipes/scan-image", {
+      imageData,
+    });
+
+    if (!data.success || !data.recipe) {
+      throw new Error(data.error || "Failed to scan recipe image");
+    }
+
+    return data.recipe;
+  },
 };
