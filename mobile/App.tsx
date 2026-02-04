@@ -105,6 +105,11 @@ export default function App() {
   // Check authentication status on app load
   useEffect(() => {
     checkAuthStatus();
+
+    // Register callback for handling 401 errors (token expiration)
+    authStorage.setAuthErrorCallback(() => {
+      setIsAuthenticated(false);
+    });
   }, []);
 
   const checkAuthStatus = async () => {

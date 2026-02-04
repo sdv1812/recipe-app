@@ -11,6 +11,9 @@ interface AuthData {
   token: string;
 }
 
+// Callback for handling auth errors (401 unauthorized)
+let authErrorCallback: (() => void) | null = null;
+
 export const authStorage = {
   /**
    * Save authentication data
@@ -73,6 +76,22 @@ export const authStorage = {
     } catch (error) {
       console.error("Error checking auth status:", error);
       return false;
+    }
+  },
+
+  /**
+   * Set callback for auth errors (401 unauthorized)
+   */
+  setAuthErrorCallback(callback: () => void): void {
+    authErrorCallback = callback;
+  },
+
+  /**
+   * Trigger auth error callback (called when 401 error occurs)
+   */
+  triggerAuthError(): void {
+    if (authErrorCallback) {
+      authErrorCallback();
     }
   },
 };

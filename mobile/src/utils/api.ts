@@ -56,8 +56,17 @@ apiClient.interceptors.request.use(
 // Response interceptor for consistent error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response) {
+      // Check for 401 Unauthorized (token expired or invalid)
+      if (error.response.status === 401) {
+        // Clear auth data
+        await authStorage.clearAuth();
+        // Trigger auth error callback to update UI
+        authStorage.triggerAuthError();
+        throw new Error("Session expired. Please login again.");
+      }
+
       // Server responded with error status
       const message = error.response.data?.error || error.message;
       throw new Error(message);
