@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { RecipeImport } from "../../../shared/types";
+import { buildUnifiedStepsFromImport } from "../utils/recipeSteps";
 import Header from "./Header";
 
 type RecipePreviewModalProps = {
@@ -124,35 +125,35 @@ export default function RecipePreviewModal({
             ))}
           </View>
 
-          {/* Preparation Steps */}
-          {recipe.preparationSteps && recipe.preparationSteps.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Preparation</Text>
-              {recipe.preparationSteps.map((step, index) => (
-                <View key={index} style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>{index + 1}.</Text>
-                  <Text style={styles.stepText}>
-                    {typeof step === "string" ? step : step.instruction}
-                  </Text>
+          {/* Steps (unified) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Steps</Text>
+            {buildUnifiedStepsFromImport(recipe).map((step) => (
+              <View key={step.key} style={styles.stepItem}>
+                <Text style={styles.stepNumber}>{step.order}.</Text>
+                <View style={styles.stepContent}>
+                  {step.tag && step.tag !== "neutral" && (
+                    <View
+                      style={[
+                        styles.stepBadge,
+                        step.tag === "prep"
+                          ? styles.prepBadge
+                          : styles.cookBadge,
+                      ]}
+                    >
+                      <Text style={styles.stepBadgeText}>
+                        {step.tag === "prep" ? "Prep" : "Cook"}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.stepText}>{step.instruction}</Text>
+                  {step.duration && (
+                    <Text style={styles.stepDuration}>⏱ {step.duration}</Text>
+                  )}
                 </View>
-              ))}
-            </View>
-          )}
-
-          {/* Cooking Steps */}
-          {recipe.cookingSteps && recipe.cookingSteps.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cooking</Text>
-              {recipe.cookingSteps.map((step, index) => (
-                <View key={index} style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>{index + 1}.</Text>
-                  <Text style={styles.stepText}>
-                    {typeof step === "string" ? step : step.instruction}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
+              </View>
+            ))}
+          </View>
         </ScrollView>
 
         {/* Action Buttons */}
@@ -304,11 +305,37 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
     minWidth: 24,
   },
+  stepContent: {
+    flex: 1,
+  },
+  stepBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.xs,
+    alignSelf: "flex-start",
+  },
+  prepBadge: {
+    backgroundColor: "#E0F2FE",
+  },
+  cookBadge: {
+    backgroundColor: "#FEF3C7",
+  },
+  stepBadgeText: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.primary,
+  },
   stepText: {
     fontSize: Typography.size.base,
     color: Colors.text.primary,
-    flex: 1,
     lineHeight: Typography.size.base * Typography.lineHeight.normal,
+  },
+  stepDuration: {
+    fontSize: Typography.size.xs,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+    fontStyle: "italic",
   },
   footer: {
     flexDirection: "row",

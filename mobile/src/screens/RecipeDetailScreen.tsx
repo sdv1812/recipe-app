@@ -16,6 +16,10 @@ import { RootStackParamList } from "../navigation/types";
 import { Recipe, RecipeImport } from "../../../shared/types";
 import { api } from "../utils/api";
 import { shareRecipe } from "../utils/recipeShare";
+import {
+  buildUnifiedSteps,
+  mapUnifiedStepsToRecipeSchema,
+} from "../utils/recipeSteps";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
@@ -42,7 +46,7 @@ export default function RecipeDetailScreen() {
   const addToGroceriesMutation = useAddToGroceries();
 
   const [activeTab, setActiveTab] = useState<
-    "ingredients" | "prep" | "cooking" | "shopping"
+    "ingredients" | "steps" | "shopping"
   >("ingredients");
   const [selectedShoppingItems, setSelectedShoppingItems] = useState<
     Set<string>
@@ -110,30 +114,24 @@ export default function RecipeDetailScreen() {
     }
   };
 
-  const toggleStepCompletion = (
-    type: "prep" | "cooking",
-    stepNumber: number,
-  ) => {
+  const toggleStepCompletion = (stepKey: string) => {
     if (!recipe) return;
 
-    const steps =
-      type === "prep" ? recipe.preparationSteps : recipe.cookingSteps;
-    const updatedSteps = steps.map((step) =>
-      step.stepNumber === stepNumber
-        ? { ...step, completed: !step.completed }
-        : step,
+    const unifiedSteps = buildUnifiedSteps(recipe);
+    const updatedUnifiedSteps = unifiedSteps.map((step) =>
+      step.key === stepKey ? { ...step, completed: !step.completed } : step,
     );
 
-    const updatedRecipe = {
-      ...recipe,
-      [type === "prep" ? "preparationSteps" : "cookingSteps"]: updatedSteps,
-    };
+    // Map back to recipe schema
+    const { preparationSteps, cookingSteps } =
+      mapUnifiedStepsToRecipeSchema(updatedUnifiedSteps);
 
     // Optimistically update using the mutation
     updateMutation.mutate({
       recipeId: recipe.id,
       updates: {
-        [type === "prep" ? "preparationSteps" : "cookingSteps"]: updatedSteps,
+        preparationSteps,
+        cookingSteps,
       },
     });
   };
@@ -305,29 +303,16 @@ export default function RecipeDetailScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "prep" && styles.activeTab]}
-            onPress={() => setActiveTab("prep")}
+            style={[styles.tab, activeTab === "steps" && styles.activeTab]}
+            onPress={() => setActiveTab("steps")}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "prep" && styles.activeTabText,
+                activeTab === "steps" && styles.activeTabText,
               ]}
             >
-              Preparation
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "cooking" && styles.activeTab]}
-            onPress={() => setActiveTab("cooking")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "cooking" && styles.activeTabText,
-              ]}
-            >
-              Cooking
+              Steps
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -359,46 +344,13 @@ export default function RecipeDetailScreen() {
             </View>
           )}
 
-          {activeTab === "prep" && (
+          {activeTab === "steps" && (
             <View style={styles.stepsContainer}>
-              {recipe.preparationSteps.map((step) => (
+              {buildUnifiedSteps(recipe).map((step) => (
                 <TouchableOpacity
-                  key={step.stepNumber}
+                  key={step.key}
                   style={styles.stepItem}
-                  onPress={() => toggleStepCompletion("prep", step.stepNumber)}
-                >
-                  <View style={styles.stepCheckbox}>
-                    <Text style={styles.stepCheckboxText}>
-                      {step.completed ? "✓" : ""}
-                    </Text>
-                  </View>
-                  <View style={styles.stepContent}>
-                    <Text style={styles.stepNumber}>
-                      Step {step.stepNumber}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.stepText,
-                        step.completed && styles.completedStepText,
-                      ]}
-                    >
-                      {step.instruction}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {activeTab === "cooking" && (
-            <View style={styles.stepsContainer}>
-              {recipe.cookingSteps.map((step) => (
-                <TouchableOpacity
-                  key={step.stepNumber}
-                  style={styles.stepItem}
-                  onPress={() =>
-                    toggleStepCompletion("cooking", step.stepNumber)
-                  }
+                  onPress={() => toggleStepCompletion(step.key)}
                 >
                   <View style={styles.stepCheckbox}>
                     <Text style={styles.stepCheckboxText}>
@@ -407,13 +359,25 @@ export default function RecipeDetailScreen() {
                   </View>
                   <View style={styles.stepContent}>
                     <View style={styles.stepHeader}>
-                      <Text style={styles.stepNumber}>
-                        Step {step.stepNumber}
-                      </Text>
+                      <View style={styles.stepNumberRow}>
+                        <Text style={styles.stepNumber}>Step {step.order}</Text>
+                        {step.tag && step.tag !== "neutral" && (
+                          <View
+                            style={[
+                              styles.stepBadge,
+                              step.tag === "prep"
+                                ? styles.prepBadge
+                                : styles.cookBadge,
+                            ]}
+                          >
+                            <Text style={styles.stepBadgeText}>
+                              {step.tag === "prep" ? "Prep" : "Cook"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       {step.duration && (
-                        <Text style={styles.stepDuration}>
-                          {step.duration}
-                        </Text>
+                        <Text style={styles.stepDuration}>{step.duration}</Text>
                       )}
                     </View>
                     <Text
@@ -708,12 +672,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.xs,
   },
+  stepNumberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
   stepNumber: {
     fontSize: Typography.size.xs,
     color: Colors.text.secondary,
     fontWeight: Typography.weight.semibold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  stepBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  prepBadge: {
+    backgroundColor: "#E0F2FE",
+  },
+  cookBadge: {
+    backgroundColor: "#FEF3C7",
+  },
+  stepBadgeText: {
+    fontSize: Typography.size.xs,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text.primary,
   },
   stepDuration: {
     fontSize: Typography.size.xs,

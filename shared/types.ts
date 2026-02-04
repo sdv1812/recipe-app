@@ -19,6 +19,22 @@ export interface CookingStep {
   completed?: boolean;
 }
 
+// Unified step types for display
+export type StepTag = "prep" | "cook" | "neutral";
+
+export interface UnifiedStep {
+  key: string; // stable key for React lists
+  order: number; // display order
+  instruction: string;
+  tag?: StepTag; // omit or "neutral" allowed
+  duration?: string; // preserved from cooking steps
+  completed?: boolean; // preserved for completion tracking
+  original?: {
+    source: "preparationSteps" | "cookingSteps";
+    stepNumber?: number;
+  };
+}
+
 export interface ShoppingItem {
   id: string;
   name: string;

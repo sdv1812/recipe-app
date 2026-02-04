@@ -60,7 +60,22 @@ RULES:
 - Use "title" NOT "recipeName"
 - Ingredients MUST have: name, quantity, unit (NOT preparation)
 - All fields are required
-- Do not wrap in markdown code blocks`;
+- Do not wrap in markdown code blocks
+
+STEP CLASSIFICATION (IMPORTANT):
+Keep all steps in chronological order. Classify each step as follows:
+- preparationSteps: Cold prep work like chopping, mixing, marinating, measuring ingredients
+- cookingSteps: Steps involving heat - pan, stove, oven, grill, boil, simmer, fry, bake, sauté
+- If a step could be either, put it in cookingSteps
+- Never leave both arrays empty - every recipe needs at least one step
+- For simple recipes, it's OK if only cookingSteps has steps (but avoid putting ALL steps in preparationSteps)
+
+Examples:
+- "Chop onions" → preparationSteps
+- "Mix marinade ingredients" → preparationSteps
+- "Heat oil in a pan" → cookingSteps
+- "Add onions and sauté for 5 minutes" → cookingSteps
+- "Season with salt" → cookingSteps (happens during cooking)`;
 
   // Add user preferences to the system prompt
   if (userPreferences && userPreferences.length > 0) {
@@ -277,6 +292,7 @@ Keep responses concise and friendly. Don't be overly formal.`;
     "sure",
     "ok",
     "okay",
+    "save",
     "save it",
     "save this",
     "save the recipe",
