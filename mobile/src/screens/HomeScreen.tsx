@@ -216,6 +216,17 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.cardMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={Colors.text.secondary}
+              style={styles.metaIcon}
+            />
+            <Text style={styles.metaText}>
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
           {item.servings && (
             <View style={styles.metaItem}>
               <Ionicons
