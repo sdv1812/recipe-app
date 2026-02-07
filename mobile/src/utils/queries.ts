@@ -330,10 +330,14 @@ export function useSendMessage() {
     mutationFn: ({
       threadId,
       message,
+      action,
+      imageData,
     }: {
       threadId: string;
       message: string;
-    }) => api.sendMessage(threadId, message),
+      action?: "scan_recipe_ocr";
+      imageData?: string;
+    }) => api.sendMessage(threadId, message, action, imageData),
     // Optimistic update: show user message immediately
     onMutate: async ({ threadId, message }) => {
       // Cancel any outgoing refetches

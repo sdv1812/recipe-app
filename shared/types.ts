@@ -120,6 +120,7 @@ export interface ThreadMessage {
   timestamp: string;
   recipeData?: RecipeImport; // Attached recipe data when assistant generates recipe
   error?: boolean; // Mark messages that had parsing errors
+  scannedText?: string; // OCR extracted text from image
   metadata?: {
     parseError?: string;
     suggestionChips?: string[];
@@ -173,14 +174,17 @@ export interface GetThreadResponse {
 export interface SendMessageRequest {
   threadId: string;
   message: string;
+  action?: "scan_recipe_ocr"; // Optional action to perform
+  imageData?: string; // Base64 image data for OCR
 }
 
 export interface SendMessageResponse {
   success: boolean;
   message?: ThreadMessage; // User message
   assistantMessage?: ThreadMessage; // AI response
-  recipe?: Recipe; // If recipe was created/updated
-  recipeCreated?: boolean; // True if this is the first recipe creation
+  recipeDraft?: RecipeImport | null; // Recipe draft when full recipe generated
+  recipe?: Recipe; // If recipe was created/updated (legacy)
+  recipeCreated?: boolean; // True if this is the first recipe creation (legacy)
   error?: string;
 }
 

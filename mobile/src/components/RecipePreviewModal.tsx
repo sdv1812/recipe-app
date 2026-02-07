@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
@@ -18,6 +19,11 @@ type RecipePreviewModalProps = {
   visible: boolean;
   onSave: (recipe: RecipeImport) => void;
   onDiscard: () => void;
+  mode?: "draft" | "view";
+  saveLabel?: string;
+  discardLabel?: string;
+  onUseThisRecipeInstead?: (recipe: RecipeImport) => void;
+  isSaving?: boolean;
 };
 
 export default function RecipePreviewModal({
@@ -25,7 +31,28 @@ export default function RecipePreviewModal({
   visible,
   onSave,
   onDiscard,
+  mode = "draft",
+  saveLabel,
+  discardLabel,
+  onUseThisRecipeInstead,
+  isSaving = false,
 }: RecipePreviewModalProps) {
+  const primaryLabel =
+    saveLabel || (mode === "draft" ? "Save Recipe" : "Use This Recipe Instead");
+  const secondaryLabel =
+    discardLabel || (mode === "draft" ? "Ask for Changes" : "Close");
+
+  const handlePrimary = () => {
+    if (mode === "view") {
+      onUseThisRecipeInstead?.(recipe);
+      return;
+    }
+
+    onSave(recipe);
+  };
+
+  const showPrimary = mode === "draft" || Boolean(onUseThisRecipeInstead);
+
   return (
     <Modal
       visible={visible}
@@ -158,7 +185,11 @@ export default function RecipePreviewModal({
 
         {/* Action Buttons */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.discardButton} onPress={onDiscard}>
+          <TouchableOpacity
+            style={styles.discardButton}
+            onPress={onDiscard}
+            disabled={isSaving}
+          >
             <Ionicons
               name="close"
               size={18}
@@ -166,24 +197,31 @@ export default function RecipePreviewModal({
               style={{ marginRight: Spacing.xs }}
             />
             <Text style={styles.discardButtonText} numberOfLines={1}>
-              Ask for Changes
+              {secondaryLabel}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={() => onSave(recipe)}
-          >
-            <Ionicons
-              name="checkmark"
-              size={18}
-              color={Colors.card}
-              style={{ marginRight: Spacing.xs }}
-            />
-            <Text style={styles.saveButtonText} numberOfLines={1}>
-              Save Recipe
-            </Text>
-          </TouchableOpacity>
+          {showPrimary && (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handlePrimary}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color={Colors.card} />
+              ) : (
+                <Ionicons
+                  name={mode === "draft" ? "checkmark" : "swap-horizontal"}
+                  size={18}
+                  color={Colors.card}
+                  style={{ marginRight: Spacing.xs }}
+                />
+              )}
+              <Text style={styles.saveButtonText} numberOfLines={1}>
+                {primaryLabel}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>

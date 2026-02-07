@@ -14,11 +14,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Markdown from "react-native-markdown-display";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
-import { useThread, useCreateThread, useSendMessage } from "../utils/queries";
-import { ThreadMessage } from "../../../shared/types";
+import {
+  useThread,
+  useCreateThread,
+  useSendMessage,
+  useCreateRecipe,
+  useUpdateRecipe,
+  useUpdateThread,
+} from "../utils/queries";
+import { ThreadMessage, RecipeImport } from "../../../shared/types";
+import RecipePreviewModal from "../components/RecipePreviewModal";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ChatModal">;
 
@@ -35,13 +44,26 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     existingThreadId,
   );
   const [userMessage, setUserMessage] = useState("");
+  const [recipeDraft, setRecipeDraft] = useState<RecipeImport | null>(null);
+  const [showRecipePreview, setShowRecipePreview] = useState(false);
+  const [previewRecipe, setPreviewRecipe] = useState<RecipeImport | null>(null);
+  const [previewMode, setPreviewMode] = useState<"draft" | "view">("draft");
+  const [expandedScannedText, setExpandedScannedText] = useState<string | null>(
+    null,
+  );
   const scrollViewRef = useRef<ScrollView>(null);
 
   const createThread = useCreateThread();
   const sendMessage = useSendMessage();
+  const createRecipe = useCreateRecipe();
+  const updateRecipe = useUpdateRecipe();
+  const updateThread = useUpdateThread();
   const { data: thread, isLoading: threadLoading } = useThread(
     currentThreadId || "",
   );
+
+  const isSaving =
+    createRecipe.isPending || updateRecipe.isPending || updateThread.isPending;
 
   useEffect(() => {
     setTimeout(() => {
@@ -49,17 +71,75 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     }, 100);
   }, [thread?.messages]);
 
-  const handleSendMessage = async () => {
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Please grant photo library access to scan recipes",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      handleSendMessage("", "scan_recipe_ocr", result.assets[0].base64);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Please grant camera access to scan recipes",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      handleSendMessage("", "scan_recipe_ocr", result.assets[0].base64);
+    }
+  };
+
+  const handleAttachmentPress = () => {
+    Alert.alert("Scan Recipe", "Choose an option", [
+      { text: "Take Photo", onPress: handleTakePhoto },
+      { text: "Choose from Library", onPress: handlePickImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleSendMessage = async (
+    messageOverride?: string,
+    action?: "scan_recipe_ocr",
+    imageData?: string,
+  ) => {
+    const messageText = messageOverride ?? userMessage.trim();
+
     if (
-      !userMessage.trim() ||
+      (!messageText && !action) ||
       sendMessage.isPending ||
       createThread.isPending
     ) {
       return;
     }
 
-    const messageText = userMessage.trim();
-    setUserMessage("");
+    if (!action) {
+      setUserMessage("");
+    }
 
     // If we're in new mode and don't have a thread yet, create one first
     if (mode === "new" && !currentThreadId) {
@@ -71,9 +151,14 @@ export default function ChatModalScreen({ route, navigation }: Props) {
             {
               threadId: newThread.id,
               message: messageText,
+              action,
+              imageData,
             },
             {
               onSuccess: (data) => {
+                if (data.recipeDraft) {
+                  setRecipeDraft(data.recipeDraft);
+                }
                 if (data.recipeCreated) {
                   console.log("Recipe created:", data.recipe?.title);
                 }
@@ -89,7 +174,9 @@ export default function ChatModalScreen({ route, navigation }: Props) {
         },
         onError: (error) => {
           Alert.alert("Error", "Failed to create chat. Please try again.");
-          setUserMessage(messageText); // Restore the message
+          if (!action) {
+            setUserMessage(messageText); // Restore the message
+          }
         },
       });
     } else if (currentThreadId) {
@@ -98,9 +185,14 @@ export default function ChatModalScreen({ route, navigation }: Props) {
         {
           threadId: currentThreadId,
           message: messageText,
+          action,
+          imageData,
         },
         {
           onSuccess: (data) => {
+            if (data.recipeDraft) {
+              setRecipeDraft(data.recipeDraft);
+            }
             if (data.recipeCreated) {
               console.log("Recipe created:", data.recipe?.title);
             }
@@ -126,9 +218,195 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     }
   };
 
+  const handlePreviewRecipe = () => {
+    if (recipeDraft) {
+      setPreviewRecipe(recipeDraft);
+      setPreviewMode("draft");
+      setShowRecipePreview(true);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setShowRecipePreview(false);
+    setPreviewRecipe(null);
+    setPreviewMode("draft");
+  };
+
+  const handleUseThisRecipeInstead = (recipe: RecipeImport) => {
+    // If a recipe is already saved for this thread, treat this as an immediate swap/update.
+    if (thread?.recipeId) {
+      handleSaveRecipe(recipe);
+      return;
+    }
+
+    // Otherwise, set it as the active draft the user can continue iterating on.
+    setRecipeDraft(recipe);
+    handleClosePreview();
+  };
+
+  const handleRecipeCardPress = (cardRecipe: RecipeImport) => {
+    // Always preview the exact recipe attached to this card.
+    setPreviewRecipe(cardRecipe);
+    setPreviewMode("view");
+    setShowRecipePreview(true);
+  };
+
+  const handleSaveRecipe = async (recipe?: RecipeImport) => {
+    const recipeToSave = recipe || recipeDraft;
+    if (!recipeToSave || !currentThreadId) return;
+    if (isSaving) return;
+
+    try {
+      let recipeIdToView: string | undefined;
+
+      if (thread?.recipeId) {
+        await updateRecipe.mutateAsync({
+          recipeId: thread.recipeId,
+          updates: {
+            title: recipeToSave.title,
+            description: recipeToSave.description,
+            servings: recipeToSave.servings,
+            prepTimeMinutes: recipeToSave.prepTimeMinutes,
+            marinateTimeMinutes: recipeToSave.marinateTimeMinutes,
+            cookTimeMinutes: recipeToSave.cookTimeMinutes,
+            category: recipeToSave.category || [],
+            tags: recipeToSave.tags || [],
+            ingredients: recipeToSave.ingredients,
+            preparationSteps: recipeToSave.preparationSteps as any,
+            cookingSteps: recipeToSave.cookingSteps as any,
+            shoppingList: recipeToSave.shoppingList as any,
+          },
+        });
+
+        recipeIdToView = thread.recipeId;
+      } else {
+        const created = await createRecipe.mutateAsync({
+          ...(recipeToSave as any),
+          threadId: currentThreadId,
+        });
+        await updateThread.mutateAsync({
+          threadId: currentThreadId,
+          updates: {
+            recipeId: created.id,
+            status: "recipe_created",
+            title: created.title,
+          },
+        });
+
+        recipeIdToView = created.id;
+      }
+
+      setRecipeDraft(null);
+      handleClosePreview();
+
+      Alert.alert(
+        "Saved",
+        thread?.recipeId ? "Recipe updated." : "Recipe saved.",
+        [
+          {
+            text: "View",
+            onPress: () => {
+              if (recipeIdToView) {
+                navigation.navigate("RecipeDetail", {
+                  recipeId: recipeIdToView,
+                  fromChat: true,
+                });
+              }
+            },
+          },
+          { text: "OK" },
+        ],
+      );
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to save recipe",
+      );
+    }
+  };
+
+  const handleExpandScannedText = (text: string) => {
+    setExpandedScannedText(text);
+  };
+
+  const handleUseScannedText = (text: string) => {
+    setUserMessage(text);
+    setExpandedScannedText(null);
+  };
+
   const renderMessage = (message: ThreadMessage) => {
     const isUser = message.role === "user";
-    const hasRecipe = message.recipeData && !message.error;
+    const isSystem = message.role === "system";
+    const hasRecipeCard = Boolean(message.recipeData && !message.error);
+    const hasScannedText = message.scannedText;
+
+    // Handle scanned text system messages
+    if (isSystem && hasScannedText) {
+      const preview = message.scannedText!.slice(0, 250);
+      const hasMore = message.scannedText!.length > 250;
+      const isExpanded = expandedScannedText === message.scannedText;
+
+      return (
+        <View key={message.id} style={styles.messageContainer}>
+          <View style={[styles.messageBubble, styles.systemBubble]}>
+            <View style={styles.scannedTextHeader}>
+              <Ionicons
+                name="document-text-outline"
+                size={20}
+                color={Colors.primary}
+              />
+              <Text style={styles.scannedTextTitle}>Scanned Text</Text>
+            </View>
+
+            <Text style={styles.scannedTextContent}>
+              {isExpanded ? message.scannedText : preview}
+              {hasMore && !isExpanded && "..."}
+            </Text>
+
+            <View style={styles.scannedTextActions}>
+              {hasMore && (
+                <TouchableOpacity
+                  style={styles.scannedTextButton}
+                  onPress={() =>
+                    isExpanded
+                      ? setExpandedScannedText(null)
+                      : handleExpandScannedText(message.scannedText!)
+                  }
+                >
+                  <Text style={styles.scannedTextButtonText}>
+                    {isExpanded ? "Show Less" : "Expand"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.scannedTextButton,
+                  styles.scannedTextButtonPrimary,
+                ]}
+                onPress={() => handleUseScannedText(message.scannedText!)}
+              >
+                <Text style={styles.scannedTextButtonTextPrimary}>
+                  Use This Text
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.scannedTextButton}
+                onPress={handleAttachmentPress}
+              >
+                <Text style={styles.scannedTextButtonText}>Rescan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.timestamp}>
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        </View>
+      );
+    }
 
     return (
       <View key={message.id} style={styles.messageContainer}>
@@ -221,10 +499,10 @@ export default function ChatModalScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        {hasRecipe && message.recipeData && (
+        {hasRecipeCard && message.recipeData && (
           <TouchableOpacity
             style={styles.recipeCard}
-            onPress={handleViewRecipe}
+            onPress={() => handleRecipeCardPress(message.recipeData!)}
             activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
@@ -255,7 +533,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
               </View>
 
               <View style={styles.cardAction}>
-                <Text style={styles.actionText}>Tap to review</Text>
+                <Text style={styles.actionText}>Preview Recipe</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -347,8 +625,55 @@ export default function ChatModalScreen({ route, navigation }: Props) {
           </ScrollView>
         )}
 
+        {/* Recipe Draft Actions */}
+        {recipeDraft && (
+          <View style={styles.recipeDraftActions}>
+            <TouchableOpacity
+              style={styles.previewButton}
+              onPress={handlePreviewRecipe}
+              disabled={isSaving}
+            >
+              <Ionicons
+                name="eye-outline"
+                size={20}
+                color={Colors.text.secondary}
+              />
+              <Text style={styles.previewButtonText}>Preview Recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => handleSaveRecipe()}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color={Colors.card} />
+              ) : (
+                <Ionicons name="checkmark" size={20} color={Colors.card} />
+              )}
+              <Text style={styles.saveButtonText}>
+                {thread?.recipeId ? "Apply Update" : "Save Recipe"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.attachButton}
+            onPress={handleAttachmentPress}
+            disabled={sendMessage.isPending || isLoading}
+          >
+            <Ionicons
+              name="camera-outline"
+              size={24}
+              color={
+                sendMessage.isPending || isLoading
+                  ? Colors.border
+                  : Colors.text.secondary
+              }
+            />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             placeholder="Ask SousAI to create a recipe..."
@@ -364,7 +689,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
               (!userMessage.trim() || sendMessage.isPending || isLoading) &&
                 styles.sendButtonDisabled,
             ]}
-            onPress={handleSendMessage}
+            onPress={() => handleSendMessage()}
             disabled={!userMessage.trim() || sendMessage.isPending || isLoading}
           >
             {sendMessage.isPending ? (
@@ -375,6 +700,28 @@ export default function ChatModalScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Recipe Preview Modal */}
+      {(previewRecipe || recipeDraft) && (
+        <RecipePreviewModal
+          visible={showRecipePreview}
+          recipe={previewRecipe || recipeDraft!}
+          mode={previewMode}
+          saveLabel={
+            previewMode === "draft"
+              ? thread?.recipeId
+                ? "Apply Update"
+                : "Save Recipe"
+              : undefined
+          }
+          onDiscard={handleClosePreview}
+          onSave={handleSaveRecipe}
+          onUseThisRecipeInstead={
+            previewMode === "view" ? handleUseThisRecipeInstead : undefined
+          }
+          isSaving={isSaving}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -597,5 +944,102 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: Colors.border,
+  },
+  systemBubble: {
+    backgroundColor: Colors.background,
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  scannedTextHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  scannedTextTitle: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.primary,
+    marginLeft: Spacing.xs,
+  },
+  scannedTextContent: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.secondary,
+    lineHeight: Typography.size.sm * 1.4,
+    marginBottom: Spacing.sm,
+  },
+  scannedTextActions: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  scannedTextButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+  },
+  scannedTextButtonPrimary: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  scannedTextButtonText: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.primary,
+  },
+  scannedTextButtonTextPrimary: {
+    fontSize: Typography.size.sm,
+    color: Colors.card,
+    fontWeight: Typography.weight.semibold,
+  },
+  recipeDraftActions: {
+    flexDirection: "row",
+    padding: Spacing.base,
+    backgroundColor: Colors.card,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: Spacing.sm,
+  },
+  previewButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.xs,
+  },
+  previewButtonText: {
+    fontSize: Typography.size.base,
+    color: Colors.text.secondary,
+    fontWeight: Typography.weight.semibold,
+  },
+  saveButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+    gap: Spacing.xs,
+  },
+  saveButtonText: {
+    fontSize: Typography.size.base,
+    color: Colors.card,
+    fontWeight: Typography.weight.semibold,
+  },
+  attachButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 44,
+    height: 44,
+    marginRight: Spacing.xs,
   },
 });

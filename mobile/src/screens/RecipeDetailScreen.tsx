@@ -27,6 +27,8 @@ import {
   useRecipe,
   useUpdateRecipe,
   useAddToGroceries,
+  useCreateThread,
+  useUpdateThread,
 } from "../utils/queries";
 
 type RecipeDetailRouteProp = RouteProp<RootStackParamList, "RecipeDetail">;
@@ -43,6 +45,8 @@ export default function RecipeDetailScreen() {
   // Use React Query hooks
   const { data: recipe, isLoading, refetch } = useRecipe(recipeId);
   const updateMutation = useUpdateRecipe();
+  const createThreadMutation = useCreateThread();
+  const updateThreadMutation = useUpdateThread();
   const addToGroceriesMutation = useAddToGroceries();
 
   const [activeTab, setActiveTab] = useState<
@@ -100,17 +104,47 @@ export default function RecipeDetailScreen() {
     }
   };
 
-  const handleEditWithAI = () => {
-    // Navigate to ChatModal with the recipe's thread if it exists
-    if (recipe?.threadId) {
+  const handleEditWithAI = async () => {
+    if (!recipe) return;
+
+    // If this recipe is already linked to a thread, open it (shows history).
+    if (recipe.threadId) {
       navigation.navigate("ChatModal", {
         threadId: recipe.threadId,
         mode: "existing",
       });
-    } else {
-      // If recipe doesn't have a thread yet, create a new one
-      // (This shouldn't happen in the new flow, but handle gracefully)
-      navigation.navigate("ChatModal", { mode: "new" });
+      return;
+    }
+
+    // Otherwise, create + link a new thread for AI edits.
+    try {
+      const newThread = await createThreadMutation.mutateAsync(recipe.title);
+
+      await updateThreadMutation.mutateAsync({
+        threadId: newThread.id,
+        updates: {
+          recipeId: recipe.id,
+          status: "recipe_created",
+          title: recipe.title,
+        },
+      });
+
+      await updateMutation.mutateAsync({
+        recipeId: recipe.id,
+        updates: { threadId: newThread.id },
+      });
+
+      navigation.navigate("ChatModal", {
+        threadId: newThread.id,
+        mode: "existing",
+      });
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Could not start an AI edit chat",
+      );
     }
   };
 

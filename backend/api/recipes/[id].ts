@@ -1,6 +1,12 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { getRecipesCollection } from "../../lib/db";
-import { Recipe } from "../../../shared/types";
+import {
+  CookingStep,
+  PreparationStep,
+  Recipe,
+  ShoppingItem,
+} from "../../../shared/types";
+import { nanoid } from "nanoid";
 import { requireAuth, unauthorizedResponse } from "../../lib/auth";
 
 interface RecipeResponse {
@@ -50,12 +56,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === "PUT") {
       const updates = req.body;
 
+      // Normalize steps/shoppingList if provided in RecipeImport-ish form
+      const normalizedUpdates: any = { ...updates };
+
+      if ("preparationSteps" in normalizedUpdates) {
+        const raw = normalizedUpdates.preparationSteps;
+        const preparationSteps: PreparationStep[] = Array.isArray(raw)
+          ? raw.map((step: string | PreparationStep, index: number) =>
+              typeof step === "string"
+                ? { stepNumber: index + 1, instruction: step }
+                : {
+                    stepNumber: step.stepNumber ?? index + 1,
+                    instruction: step.instruction,
+                    completed: step.completed,
+                  },
+            )
+          : [];
+        normalizedUpdates.preparationSteps = preparationSteps;
+      }
+
+      if ("cookingSteps" in normalizedUpdates) {
+        const raw = normalizedUpdates.cookingSteps;
+        const cookingSteps: CookingStep[] = Array.isArray(raw)
+          ? raw.map((step: string | CookingStep, index: number) =>
+              typeof step === "string"
+                ? { stepNumber: index + 1, instruction: step }
+                : {
+                    stepNumber: step.stepNumber ?? index + 1,
+                    instruction: step.instruction,
+                    duration: step.duration,
+                    completed: step.completed,
+                  },
+            )
+          : [];
+        normalizedUpdates.cookingSteps = cookingSteps;
+      }
+
+      if ("shoppingList" in normalizedUpdates) {
+        const raw = normalizedUpdates.shoppingList;
+        const shoppingList: ShoppingItem[] = Array.isArray(raw)
+          ? raw.map((item: any) =>
+              typeof item === "string"
+                ? {
+                    id: nanoid(),
+                    name: item,
+                    quantity: "",
+                    unit: "",
+                    purchased: false,
+                  }
+                : {
+                    id: item.id || nanoid(),
+                    name: item.name,
+                    quantity: item.quantity || "",
+                    unit: item.unit,
+                    purchased: Boolean(item.purchased),
+                  },
+            )
+          : [];
+        normalizedUpdates.shoppingList = shoppingList;
+      }
+
       // Verify user owns this recipe
       const result = await recipes.updateOne(
         { id, userId },
         {
           $set: {
-            ...updates,
+            ...normalizedUpdates,
             updatedAt: new Date().toISOString(),
           },
         },

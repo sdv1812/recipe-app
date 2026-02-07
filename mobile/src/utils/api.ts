@@ -361,9 +361,12 @@ export const api = {
   async sendMessage(
     threadId: string,
     message: string,
+    action?: "scan_recipe_ocr",
+    imageData?: string,
   ): Promise<{
     userMessage: ThreadMessage;
     assistantMessage: ThreadMessage;
+    recipeDraft?: RecipeImport | null;
     recipe?: Recipe;
     recipeCreated?: boolean;
   }> {
@@ -372,6 +375,8 @@ export const api = {
       {
         threadId,
         message,
+        action,
+        imageData,
       } as SendMessageRequest,
     );
 
@@ -382,6 +387,7 @@ export const api = {
     return {
       userMessage: data.message,
       assistantMessage: data.assistantMessage,
+      recipeDraft: data.recipeDraft,
       recipe: data.recipe,
       recipeCreated: data.recipeCreated,
     };
