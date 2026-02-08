@@ -14,7 +14,13 @@ export type RootStackParamList = {
   Register: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
   RecipeDetail: { recipeId: string; fromChat?: boolean };
-  ChatModal: { threadId?: string; mode: "new" | "existing" }; // New chat modal
+  ChatModal: {
+    threadId?: string;
+    mode: "new" | "existing";
+    initialAction?: "scan_recipe_ocr";
+    initialImageData?: string;
+    initialMessage?: string;
+  }; // New chat modal
   Preferences: undefined;
   Settings: undefined;
 };

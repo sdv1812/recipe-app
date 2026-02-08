@@ -28,7 +28,7 @@ import { api } from "../utils/api";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
-import RecipePreviewModal from "../components/RecipePreviewModal";
+// Scanning now routes through ChatModal OCR action
 import {
   Colors,
   Typography,
@@ -50,8 +50,6 @@ export default function HomeScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>("recipes");
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [scannedRecipe, setScannedRecipe] = useState<RecipeImport | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
 
   // Use React Query hooks
   const { data: recipes = [], isLoading, isFetching, refetch } = useRecipes();
@@ -228,65 +226,45 @@ export default function HomeScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0].base64) {
-      processRecipeImage(result.assets[0].base64);
-    }
-  };
-
-  const handlePickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0].base64) {
-      processRecipeImage(result.assets[0].base64);
-    }
-  };
-
-  const processRecipeImage = async (base64Image: string) => {
     setIsScanning(true);
     try {
-      const imageData = `data:image/jpeg;base64,${base64Image}`;
-      const recipe = await api.scanRecipeImage(imageData);
-      setScannedRecipe(recipe);
-      setShowPreview(true);
-    } catch (error) {
-      Alert.alert(
-        "Scan Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not scan recipe. Please try again.",
-      );
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        navigation.navigate("ChatModal", {
+          mode: "new",
+          initialAction: "scan_recipe_ocr",
+          initialImageData: result.assets[0].base64,
+        });
+      }
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleSaveScannedRecipe = async (recipe: RecipeImport) => {
+  const handlePickImage = async () => {
+    setIsScanning(true);
     try {
-      await createRecipeMutation.mutateAsync(recipe);
-      setShowPreview(false);
-      setScannedRecipe(null);
-      Alert.alert("Success", "Recipe saved successfully!");
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to save recipe",
-      );
-    }
-  };
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        base64: true,
+      });
 
-  const handleDiscardScannedRecipe = () => {
-    setShowPreview(false);
-    setScannedRecipe(null);
+      if (!result.canceled && result.assets[0].base64) {
+        navigation.navigate("ChatModal", {
+          mode: "new",
+          initialAction: "scan_recipe_ocr",
+          initialImageData: result.assets[0].base64,
+        });
+      }
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
@@ -659,14 +637,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Recipe Preview Modal */}
-      {scannedRecipe && (
-        <RecipePreviewModal
-          recipe={scannedRecipe}
-          visible={showPreview}
-          onSave={handleSaveScannedRecipe}
-          onDiscard={handleDiscardScannedRecipe}
-        />
-      )}
+      {/* Recipe scan preview now lives in ChatModal */}
     </View>
   );
 }

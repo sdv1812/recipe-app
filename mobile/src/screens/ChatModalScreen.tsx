@@ -39,7 +39,13 @@ const SUGGESTION_CHIPS = [
 ];
 
 export default function ChatModalScreen({ route, navigation }: Props) {
-  const { threadId: existingThreadId, mode } = route.params;
+  const {
+    threadId: existingThreadId,
+    mode,
+    initialAction,
+    initialImageData,
+    initialMessage,
+  } = route.params;
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
     existingThreadId,
   );
@@ -65,11 +71,21 @@ export default function ChatModalScreen({ route, navigation }: Props) {
   const isSaving =
     createRecipe.isPending || updateRecipe.isPending || updateThread.isPending;
 
+  const initialActionSentRef = useRef(false);
+
   useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [thread?.messages]);
+
+  useEffect(() => {
+    if (initialActionSentRef.current) return;
+    if (!initialAction || !initialImageData) return;
+
+    initialActionSentRef.current = true;
+    handleSendMessage(initialMessage ?? "", initialAction, initialImageData);
+  }, [initialAction, initialImageData, initialMessage]);
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
