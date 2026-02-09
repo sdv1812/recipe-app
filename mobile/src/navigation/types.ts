@@ -20,6 +20,7 @@ export type RootStackParamList = {
     initialAction?: "scan_recipe_ocr" | "scan_ingredients_image";
     initialImageData?: string;
     initialMessage?: string;
+    showAttachmentSheet?: boolean;
   }; // New chat modal
   Preferences: undefined;
   Settings: undefined;

@@ -10,9 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
-import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -46,10 +44,8 @@ type ViewMode = "recipes" | "drafts" | "favorites";
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
-  const { showActionSheetWithOptions } = useActionSheet();
   const [viewMode, setViewMode] = useState<ViewMode>("recipes");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
 
   // Use React Query hooks
   const { data: recipes = [], isLoading, isFetching, refetch } = useRecipes();
@@ -187,108 +183,11 @@ export default function HomeScreen() {
     navigation.navigate("ChatModal", { threadId, mode: "existing" });
   };
 
-  const handleAttachmentPress = async () => {
-    if (isScanning) return;
-
-    const options = [
-      "Recipe from Camera",
-      "Recipe from Library",
-      "Ingredients from Camera",
-      "Ingredients from Library",
-      "Cancel",
-    ];
-    const icons = [
-      <Ionicons name="camera-outline" size={24} color={"#000"} />,
-      <Ionicons name="images-outline" size={24} color={"#000"} />,
-      <Ionicons name="nutrition-outline" size={24} color={"#000"} />,
-      <Ionicons name="image-outline" size={24} color={"#000"} />,
-      <Ionicons name="close-circle-outline" size={24} color={"#8E8E93"} />,
-    ];
-
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 4,
-        icons,
-        title: "Add Image",
-        message: "Choose what you want to scan",
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) {
-          handleImageFlow("scan_recipe_ocr", "camera");
-        } else if (buttonIndex === 1) {
-          handleImageFlow("scan_recipe_ocr", "library");
-        } else if (buttonIndex === 2) {
-          handleImageFlow("scan_ingredients_image", "camera");
-        } else if (buttonIndex === 3) {
-          handleImageFlow("scan_ingredients_image", "library");
-        }
-      },
-    );
-  };
-
-  const handleImageFlow = async (
-    action: "scan_recipe_ocr" | "scan_ingredients_image",
-    source: "camera" | "library",
-  ) => {
-    if (source === "camera") {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please allow camera access to take photos.",
-        );
-        return;
-      }
-
-      setIsScanning(true);
-      try {
-        const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
-          base64: true,
-        });
-
-        if (!result.canceled && result.assets[0].base64) {
-          navigation.navigate("ChatModal", {
-            mode: "new",
-            initialAction: action,
-            initialImageData: result.assets[0].base64,
-          });
-        }
-      } finally {
-        setIsScanning(false);
-      }
-      return;
-    }
-
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please allow access to your photos to scan recipes.",
-      );
-      return;
-    }
-
-    setIsScanning(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0].base64) {
-        navigation.navigate("ChatModal", {
-          mode: "new",
-          initialAction: action,
-          initialImageData: result.assets[0].base64,
-        });
-      }
-    } finally {
-      setIsScanning(false);
-    }
+  const handleAttachmentPress = () => {
+    navigation.navigate("ChatModal", {
+      mode: "new",
+      showAttachmentSheet: true,
+    });
   };
 
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
@@ -632,35 +531,25 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.attachButton}
           onPress={handleAttachmentPress}
-          disabled={isScanning}
         >
-          {isScanning ? (
-            <ActivityIndicator size="small" color={Colors.text.secondary} />
-          ) : (
-            <Ionicons
-              name="attach-outline"
-              size={24}
-              color={Colors.text.secondary}
-            />
-          )}
+          <Ionicons
+            name="attach-outline"
+            size={24}
+            color={Colors.text.secondary}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.fakeInput}
           onPress={handleOpenNewChat}
           activeOpacity={0.8}
-          disabled={isScanning}
         >
           <Text style={styles.fakeInputText} numberOfLines={1}>
             Ask SousAI to create a recipe...
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.sendButton, isScanning && styles.sendButtonDisabled]}
-          onPress={handleOpenNewChat}
-          disabled={isScanning}
-        >
+        <TouchableOpacity style={styles.sendButton} onPress={handleOpenNewChat}>
           <Ionicons name="add" size={20} color={Colors.card} />
         </TouchableOpacity>
       </View>

@@ -81,6 +81,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     initialAction,
     initialImageData,
     initialMessage,
+    showAttachmentSheet,
   } = route.params;
   const { showActionSheetWithOptions } = useActionSheet();
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
@@ -109,12 +110,24 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     createRecipe.isPending || updateRecipe.isPending || updateThread.isPending;
 
   const initialActionSentRef = useRef(false);
+  const attachmentSheetShownRef = useRef(false);
 
   useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [thread?.messages]);
+
+  useEffect(() => {
+    if (attachmentSheetShownRef.current) return;
+    if (!showAttachmentSheet) return;
+
+    attachmentSheetShownRef.current = true;
+    // Small delay to let modal animation complete
+    setTimeout(() => {
+      handleAttachmentPress();
+    }, 500);
+  }, [showAttachmentSheet]);
 
   useEffect(() => {
     if (initialActionSentRef.current) return;
