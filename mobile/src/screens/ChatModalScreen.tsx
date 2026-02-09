@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Markdown from "react-native-markdown-display";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +39,41 @@ const SUGGESTION_CHIPS = [
   "Under 20 min",
 ];
 
+type ScanSource = "camera" | "library";
+type ScanAction = "scan_recipe_ocr" | "scan_ingredients_image";
+
+const QUICK_ACTION_CHIPS: Array<{
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  action: ScanAction;
+  source: ScanSource;
+}> = [
+  {
+    label: "Recipe from camera",
+    icon: "camera-outline",
+    action: "scan_recipe_ocr",
+    source: "camera",
+  },
+  {
+    label: "Recipe from library",
+    icon: "images-outline",
+    action: "scan_recipe_ocr",
+    source: "library",
+  },
+  {
+    label: "Ingredients from camera",
+    icon: "nutrition-outline",
+    action: "scan_ingredients_image",
+    source: "camera",
+  },
+  {
+    label: "Ingredients from library",
+    icon: "image-outline",
+    action: "scan_ingredients_image",
+    source: "library",
+  },
+];
+
 export default function ChatModalScreen({ route, navigation }: Props) {
   const {
     threadId: existingThreadId,
@@ -46,6 +82,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     initialImageData,
     initialMessage,
   } = route.params;
+  const { showActionSheetWithOptions } = useActionSheet();
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
     existingThreadId,
   );
@@ -87,60 +124,11 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     handleSendMessage(initialMessage ?? "", initialAction, initialImageData);
   }, [initialAction, initialImageData, initialMessage]);
 
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please grant photo library access to scan recipes",
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0].base64) {
-      handleSendMessage("", "scan_recipe_ocr", result.assets[0].base64);
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please grant camera access to scan recipes",
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0].base64) {
-      handleSendMessage("", "scan_recipe_ocr", result.assets[0].base64);
-    }
-  };
-
-  const handleAttachmentPress = () => {
-    Alert.alert("Scan Recipe", "Choose an option", [
-      { text: "Take Photo", onPress: handleTakePhoto },
-      { text: "Choose from Library", onPress: handlePickImage },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
+  // Image flows are driven by quick-action chips; the camera icon is a fast path.
 
   const handleSendMessage = async (
     messageOverride?: string,
-    action?: "scan_recipe_ocr",
+    action?: ScanAction,
     imageData?: string,
   ) => {
     const messageText = messageOverride ?? userMessage.trim();
@@ -350,6 +338,98 @@ export default function ChatModalScreen({ route, navigation }: Props) {
     setExpandedScannedText(null);
   };
 
+  const startImageFlow = async (action: ScanAction, source: ScanSource) => {
+    if (sendMessage.isPending || createThread.isPending) return;
+
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please grant camera access to scan images",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        handleSendMessage("", action, result.assets[0].base64);
+      }
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Please grant photo library access to scan images",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      handleSendMessage("", action, result.assets[0].base64);
+    }
+  };
+
+  const handleAttachmentPress = () => {
+    const options = [
+      "Recipe from Camera",
+      "Recipe from Library",
+      "Ingredients from Camera",
+      "Ingredients from Library",
+      "Cancel",
+    ];
+    const icons = [
+      <Ionicons name="camera-outline" size={24} color={Colors.text.primary} />,
+      <Ionicons name="images-outline" size={24} color={Colors.text.primary} />,
+      <Ionicons
+        name="nutrition-outline"
+        size={24}
+        color={Colors.text.primary}
+      />,
+      <Ionicons name="image-outline" size={24} color={Colors.text.primary} />,
+      <Ionicons
+        name="close-circle-outline"
+        size={24}
+        color={Colors.text.secondary}
+      />,
+    ];
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: 4,
+        icons,
+        title: "Add Image",
+        message: "Choose what you want to scan",
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          startImageFlow("scan_recipe_ocr", "camera");
+        } else if (buttonIndex === 1) {
+          startImageFlow("scan_recipe_ocr", "library");
+        } else if (buttonIndex === 2) {
+          startImageFlow("scan_ingredients_image", "camera");
+        } else if (buttonIndex === 3) {
+          startImageFlow("scan_ingredients_image", "library");
+        }
+      },
+    );
+  };
+
   const renderMessage = (message: ThreadMessage) => {
     const isUser = message.role === "user";
     const isSystem = message.role === "system";
@@ -362,16 +442,20 @@ export default function ChatModalScreen({ route, navigation }: Props) {
       const hasMore = message.scannedText!.length > 250;
       const isExpanded = expandedScannedText === message.scannedText;
 
+      const isIngredientDetection = message.content.includes("Detected");
+      const headerTitle = isIngredientDetection
+        ? "Detected Items"
+        : "Scanned Text";
+      const headerIcon = isIngredientDetection
+        ? "nutrition-outline"
+        : "document-text-outline";
+
       return (
         <View key={message.id} style={styles.messageContainer}>
           <View style={[styles.messageBubble, styles.systemBubble]}>
             <View style={styles.scannedTextHeader}>
-              <Ionicons
-                name="document-text-outline"
-                size={20}
-                color={Colors.primary}
-              />
-              <Text style={styles.scannedTextTitle}>Scanned Text</Text>
+              <Ionicons name={headerIcon} size={20} color={Colors.primary} />
+              <Text style={styles.scannedTextTitle}>{headerTitle}</Text>
             </View>
 
             <Text style={styles.scannedTextContent}>
@@ -625,6 +709,25 @@ export default function ChatModalScreen({ route, navigation }: Props) {
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                <View style={styles.quickActionsContainer}>
+                  {QUICK_ACTION_CHIPS.map((chip) => (
+                    <TouchableOpacity
+                      key={`${chip.action}-${chip.source}-${chip.label}`}
+                      style={styles.quickActionChip}
+                      onPress={() => startImageFlow(chip.action, chip.source)}
+                      disabled={sendMessage.isPending || isLoading}
+                    >
+                      <Ionicons
+                        name={chip.icon}
+                        size={16}
+                        color={Colors.text.secondary}
+                        style={{ marginRight: Spacing.xs }}
+                      />
+                      <Text style={styles.quickActionText}>{chip.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             )}
 
@@ -681,7 +784,7 @@ export default function ChatModalScreen({ route, navigation }: Props) {
             disabled={sendMessage.isPending || isLoading}
           >
             <Ionicons
-              name="camera-outline"
+              name="attach-outline"
               size={24}
               color={
                 sendMessage.isPending || isLoading
@@ -818,6 +921,28 @@ const styles = StyleSheet.create({
   suggestionText: {
     fontSize: Typography.size.sm,
     color: Colors.text.primary,
+  },
+  quickActionsContainer: {
+    marginTop: Spacing.xl,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: Spacing.sm,
+  },
+  quickActionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  quickActionText: {
+    fontSize: Typography.size.sm,
+    color: Colors.text.primary,
+    fontWeight: Typography.weight.medium,
   },
   messageContainer: {
     marginBottom: Spacing.base,

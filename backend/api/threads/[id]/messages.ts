@@ -12,7 +12,10 @@ import {
 } from "../../../../shared/types";
 import { requireAuth, unauthorizedResponse } from "../../../lib/auth";
 import { getChatWithRecipeDraft } from "../../../lib/openai";
-import { extractTextFromImage } from "../../../lib/vision";
+import {
+  extractLabelsFromImage,
+  extractTextFromImage,
+} from "../../../lib/vision";
 import { detectPreference } from "../../../lib/preferenceDetection";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -60,12 +63,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Handle OCR action if provided
+    // Handle image actions if provided
     let scannedText: string | undefined;
+    let systemContent: string | undefined;
+
     if (action === "scan_recipe_ocr" && imageData) {
       try {
-        console.log("Extracting text from image...");
+        console.log("Extracting text from recipe image...");
         scannedText = await extractTextFromImage(imageData);
+        systemContent = "📄 Scanned recipe text from image";
         console.log(`Extracted ${scannedText.length} characters`);
       } catch (error) {
         console.error("OCR error:", error);
@@ -79,13 +85,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (action === "scan_ingredients_image" && imageData) {
+      try {
+        console.log("Detecting ingredients from image labels...");
+        const labels = await extractLabelsFromImage(imageData, 12);
+        systemContent = "🥕 Detected items from image";
+        scannedText = labels.map((l) => `- ${l}`).join("\n");
+        console.log(`Detected ${labels.length} labels`);
+      } catch (error) {
+        console.error("Label detection error:", error);
+        return res.status(400).json({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to detect ingredients from image",
+        });
+      }
+    }
+
     // Create user message (or system message for scanned text)
     const userMessage: ThreadMessage = scannedText
       ? {
           id: nanoid(),
           threadId,
           role: "system",
-          content: "📄 Scanned text from image",
+          content: systemContent || "📄 Scanned text from image",
           scannedText,
           timestamp: new Date().toISOString(),
         }
@@ -127,7 +152,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Prepare the message for LLM (inject scanned text if OCR was performed)
     const llmMessage = scannedText
-      ? `I scanned a recipe image and extracted this text:\n\n${scannedText}\n\nPlease analyze this and create a recipe from it.`
+      ? action === "scan_ingredients_image"
+        ? `I took a photo of ingredients/items. Detected items:\n\n${scannedText}\n\nPlease create a complete recipe using these ingredients as the main components. You may assume common pantry staples (salt, pepper, water, oil) unless they conflict with dietary preferences in the conversation. If the detected items are not food, ask a single clarifying question and return recipeDraft: null.`
+        : `I scanned a recipe image and extracted this text:\n\n${scannedText}\n\nPlease analyze this and create a recipe from it.`
       : message;
 
     // Get AI response with recipeDraft

@@ -361,7 +361,7 @@ export const api = {
   async sendMessage(
     threadId: string,
     message: string,
-    action?: "scan_recipe_ocr",
+    action?: "scan_recipe_ocr" | "scan_ingredients_image",
     imageData?: string,
   ): Promise<{
     userMessage: ThreadMessage;

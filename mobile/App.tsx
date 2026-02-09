@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { RootStackParamList, TabParamList } from "./src/navigation/types";
 import HomeScreen from "./src/screens/HomeScreen";
 import RecipeDetailScreen from "./src/screens/RecipeDetailScreen";
@@ -142,84 +143,89 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          {!isAuthenticated ? (
-            // Auth Stack
-            <>
-              <Stack.Screen name="Login">
-                {(props) => (
-                  <LoginScreen {...props} onLoginSuccess={handleAuthSuccess} />
-                )}
-              </Stack.Screen>
-              <Stack.Screen name="Register">
-                {(props) => (
-                  <RegisterScreen
-                    {...props}
-                    onRegisterSuccess={handleAuthSuccess}
-                  />
-                )}
-              </Stack.Screen>
-            </>
-          ) : (
-            // Main App Stack with Tabs
-            <>
-              <Stack.Screen name="MainTabs">
-                {(props) => <MainTabs {...props} onLogout={handleLogout} />}
-              </Stack.Screen>
-              <Stack.Screen
-                name="RecipeDetail"
-                component={RecipeDetailScreen}
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                }}
-              />
-              <Stack.Screen
-                name="ChatModal"
-                component={ChatModalScreen}
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="Preferences"
-                component={PreferencesScreen}
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                  headerShown: true,
-                  headerTitle: "My Preferences",
-                }}
-              />
-              <Stack.Screen
-                name="Settings"
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                  headerShown: false,
-                }}
-              >
-                {(props) => (
-                  <SettingsDrawer
-                    {...props}
-                    onClose={() => props.navigation.goBack()}
-                    onLogout={handleLogout}
-                  />
-                )}
-              </Stack.Screen>
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </QueryClientProvider>
+    <ActionSheetProvider>
+      <QueryClientProvider client={queryClient}>
+        <NavigationContainer>
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
+            {!isAuthenticated ? (
+              // Auth Stack
+              <>
+                <Stack.Screen name="Login">
+                  {(props) => (
+                    <LoginScreen
+                      {...props}
+                      onLoginSuccess={handleAuthSuccess}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen name="Register">
+                  {(props) => (
+                    <RegisterScreen
+                      {...props}
+                      onRegisterSuccess={handleAuthSuccess}
+                    />
+                  )}
+                </Stack.Screen>
+              </>
+            ) : (
+              // Main App Stack with Tabs
+              <>
+                <Stack.Screen name="MainTabs">
+                  {(props) => <MainTabs {...props} onLogout={handleLogout} />}
+                </Stack.Screen>
+                <Stack.Screen
+                  name="RecipeDetail"
+                  component={RecipeDetailScreen}
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                  }}
+                />
+                <Stack.Screen
+                  name="ChatModal"
+                  component={ChatModalScreen}
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="Preferences"
+                  component={PreferencesScreen}
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: true,
+                    headerTitle: "My Preferences",
+                  }}
+                />
+                <Stack.Screen
+                  name="Settings"
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                >
+                  {(props) => (
+                    <SettingsDrawer
+                      {...props}
+                      onClose={() => props.navigation.goBack()}
+                      onLogout={handleLogout}
+                    />
+                  )}
+                </Stack.Screen>
+              </>
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </QueryClientProvider>
+    </ActionSheetProvider>
   );
 }
 

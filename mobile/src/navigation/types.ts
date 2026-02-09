@@ -17,7 +17,7 @@ export type RootStackParamList = {
   ChatModal: {
     threadId?: string;
     mode: "new" | "existing";
-    initialAction?: "scan_recipe_ocr";
+    initialAction?: "scan_recipe_ocr" | "scan_ingredients_image";
     initialImageData?: string;
     initialMessage?: string;
   }; // New chat modal

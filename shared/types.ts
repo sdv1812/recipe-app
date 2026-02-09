@@ -174,7 +174,7 @@ export interface GetThreadResponse {
 export interface SendMessageRequest {
   threadId: string;
   message: string;
-  action?: "scan_recipe_ocr"; // Optional action to perform
+  action?: "scan_recipe_ocr" | "scan_ingredients_image"; // Optional action to perform
   imageData?: string; // Base64 image data for OCR
 }
 

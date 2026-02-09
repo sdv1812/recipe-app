@@ -335,11 +335,11 @@ export function useSendMessage() {
     }: {
       threadId: string;
       message: string;
-      action?: "scan_recipe_ocr";
+      action?: "scan_recipe_ocr" | "scan_ingredients_image";
       imageData?: string;
     }) => api.sendMessage(threadId, message, action, imageData),
     // Optimistic update: show user message immediately
-    onMutate: async ({ threadId, message }) => {
+    onMutate: async ({ threadId, message, action }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.thread(threadId) });
 
@@ -350,17 +350,21 @@ export function useSendMessage() {
 
       // Optimistically add the user message
       if (previousThread) {
-        const optimisticUserMessage: ThreadMessage = {
+        const optimisticMessage: ThreadMessage = {
           id: `temp-${Date.now()}`, // Temporary ID
           threadId,
-          role: "user",
-          content: message,
+          role: action ? "system" : "user",
+          content: action
+            ? action === "scan_ingredients_image"
+              ? "🥕 Detecting ingredients from image..."
+              : "📄 Scanning recipe image..."
+            : message,
           timestamp: new Date().toISOString(),
         };
 
         queryClient.setQueryData<Thread>(queryKeys.thread(threadId), {
           ...previousThread,
-          messages: [...previousThread.messages, optimisticUserMessage],
+          messages: [...previousThread.messages, optimisticMessage],
           updatedAt: new Date().toISOString(),
         });
       }

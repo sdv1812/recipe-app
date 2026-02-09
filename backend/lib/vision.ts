@@ -56,3 +56,35 @@ export async function extractTextFromImage(imageData: string): Promise<string> {
 
   return fullText.trim();
 }
+
+/**
+ * Extract labels from an image using Google Cloud Vision (useful for ingredient photos)
+ * @param imageData - Base64 encoded image data
+ * @param maxLabels - Max labels to return
+ */
+export async function extractLabelsFromImage(
+  imageData: string,
+  maxLabels: number = 12,
+): Promise<string[]> {
+  const client = getVisionClient();
+
+  const base64Image = imageData.replace(/^data:image\/\w+;base64,/, "");
+
+  const [result] = await client.labelDetection({
+    image: {
+      content: base64Image,
+    },
+  });
+
+  const annotations = result.labelAnnotations || [];
+  const labels = annotations
+    .map((a) => (a.description || "").trim())
+    .filter(Boolean)
+    .slice(0, Math.max(1, maxLabels));
+
+  if (labels.length === 0) {
+    throw new Error("No labels detected in image");
+  }
+
+  return labels;
+}

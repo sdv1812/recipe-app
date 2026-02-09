@@ -10,21 +10,20 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { Recipe, Thread, RecipeImport } from "../../../shared/types";
+import { Recipe, Thread } from "../../../shared/types";
 import { formatTime } from "../utils/timeFormatter";
 import {
   useRecipes,
   useDeleteRecipe,
   useThreads,
   useDeleteThread,
-  useCreateRecipe,
 } from "../utils/queries";
-import { api } from "../utils/api";
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
@@ -47,6 +46,7 @@ type ViewMode = "recipes" | "drafts" | "favorites";
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
+  const { showActionSheetWithOptions } = useActionSheet();
   const [viewMode, setViewMode] = useState<ViewMode>("recipes");
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -60,7 +60,6 @@ export default function HomeScreen() {
   } = useThreads();
   const deleteMutation = useDeleteRecipe();
   const deleteThreadMutation = useDeleteThread();
-  const createRecipeMutation = useCreateRecipe();
 
   const handleDeleteRecipe = (recipeId: string) => {
     Alert.alert(
@@ -188,8 +187,81 @@ export default function HomeScreen() {
     navigation.navigate("ChatModal", { threadId, mode: "existing" });
   };
 
-  const handleScanRecipe = async () => {
-    // Request permissions
+  const handleAttachmentPress = async () => {
+    if (isScanning) return;
+
+    const options = [
+      "Recipe from Camera",
+      "Recipe from Library",
+      "Ingredients from Camera",
+      "Ingredients from Library",
+      "Cancel",
+    ];
+    const icons = [
+      <Ionicons name="camera-outline" size={24} color={"#000"} />,
+      <Ionicons name="images-outline" size={24} color={"#000"} />,
+      <Ionicons name="nutrition-outline" size={24} color={"#000"} />,
+      <Ionicons name="image-outline" size={24} color={"#000"} />,
+      <Ionicons name="close-circle-outline" size={24} color={"#8E8E93"} />,
+    ];
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: 4,
+        icons,
+        title: "Add Image",
+        message: "Choose what you want to scan",
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          handleImageFlow("scan_recipe_ocr", "camera");
+        } else if (buttonIndex === 1) {
+          handleImageFlow("scan_recipe_ocr", "library");
+        } else if (buttonIndex === 2) {
+          handleImageFlow("scan_ingredients_image", "camera");
+        } else if (buttonIndex === 3) {
+          handleImageFlow("scan_ingredients_image", "library");
+        }
+      },
+    );
+  };
+
+  const handleImageFlow = async (
+    action: "scan_recipe_ocr" | "scan_ingredients_image",
+    source: "camera" | "library",
+  ) => {
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please allow camera access to take photos.",
+        );
+        return;
+      }
+
+      setIsScanning(true);
+      try {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+          base64: true,
+        });
+
+        if (!result.canceled && result.assets[0].base64) {
+          navigation.navigate("ChatModal", {
+            mode: "new",
+            initialAction: action,
+            initialImageData: result.assets[0].base64,
+          });
+        }
+      } finally {
+        setIsScanning(false);
+      }
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -199,54 +271,6 @@ export default function HomeScreen() {
       return;
     }
 
-    // Show picker options
-    Alert.alert("Scan Recipe", "Choose how to add your recipe photo", [
-      {
-        text: "Take Photo",
-        onPress: handleTakePhoto,
-      },
-      {
-        text: "Choose from Gallery",
-        onPress: handlePickImage,
-      },
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-    ]);
-  };
-
-  const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please allow camera access to take photos.",
-      );
-      return;
-    }
-
-    setIsScanning(true);
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0].base64) {
-        navigation.navigate("ChatModal", {
-          mode: "new",
-          initialAction: "scan_recipe_ocr",
-          initialImageData: result.assets[0].base64,
-        });
-      }
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const handlePickImage = async () => {
     setIsScanning(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -258,7 +282,7 @@ export default function HomeScreen() {
       if (!result.canceled && result.assets[0].base64) {
         navigation.navigate("ChatModal", {
           mode: "new",
-          initialAction: "scan_recipe_ocr",
+          initialAction: action,
           initialImageData: result.assets[0].base64,
         });
       }
@@ -604,35 +628,40 @@ export default function HomeScreen() {
       )}
 
       {/* Bottom Composer */}
-      <View style={styles.composerContainer}>
+      <View style={styles.inputContainer}>
         <TouchableOpacity
-          style={styles.scanButton}
-          onPress={handleScanRecipe}
+          style={styles.attachButton}
+          onPress={handleAttachmentPress}
           disabled={isScanning}
         >
           {isScanning ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={Colors.text.secondary} />
           ) : (
-            <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+            <Ionicons
+              name="attach-outline"
+              size={24}
+              color={Colors.text.secondary}
+            />
           )}
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={styles.composer}
+          style={styles.fakeInput}
           onPress={handleOpenNewChat}
           activeOpacity={0.8}
+          disabled={isScanning}
         >
-          <Ionicons
-            name="chatbubble-outline"
-            size={20}
-            color={Colors.text.secondary}
-            style={styles.composerIcon}
-          />
-          <Text style={styles.composerPlaceholder}>
+          <Text style={styles.fakeInputText} numberOfLines={1}>
             Ask SousAI to create a recipe...
           </Text>
-          <View style={styles.composerSendButton}>
-            <Ionicons name="add" size={24} color={Colors.primary} />
-          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.sendButton, isScanning && styles.sendButtonDisabled]}
+          onPress={handleOpenNewChat}
+          disabled={isScanning}
+        >
+          <Ionicons name="add" size={20} color={Colors.card} />
         </TouchableOpacity>
       </View>
 
@@ -841,35 +870,27 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   // Bottom Composer
-  composerContainer: {
+  inputContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    flexDirection: "row",
+    padding: Spacing.base,
     backgroundColor: Colors.card,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xl,
-    flexDirection: "row",
-    gap: Spacing.sm,
     alignItems: "center",
   },
-  scanButton: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  attachButton: {
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: Spacing.sm,
   },
-  composer: {
+  fakeInput: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: Colors.background,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
@@ -877,21 +898,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
     height: 48,
-  },
-  composerIcon: {
+    justifyContent: "center",
     marginRight: Spacing.sm,
   },
-  composerPlaceholder: {
-    flex: 1,
+  fakeInputText: {
     fontSize: Typography.size.base,
     color: Colors.text.secondary,
   },
-  composerSendButton: {
-    width: 32,
-    height: 32,
+  sendButton: {
+    backgroundColor: Colors.primary,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.card,
     justifyContent: "center",
     alignItems: "center",
+  },
+  sendButtonDisabled: {
+    backgroundColor: Colors.border,
   },
 });
