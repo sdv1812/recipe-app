@@ -58,24 +58,45 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response) {
+      const status = error.response.status;
+      const url = error.config?.url || "";
+      const isLoginRequest =
+        url.includes("/auth/login") || url.includes("/auth/register");
+
       // Check for 401 Unauthorized (token expired or invalid)
-      if (error.response.status === 401) {
-        // Clear auth data
-        await authStorage.clearAuth();
-        // Trigger auth error callback to update UI
-        authStorage.triggerAuthError();
-        throw new Error("Session expired. Please login again.");
+      if (status === 401) {
+        // Only trigger auth error callback if not a login/register request
+        if (!isLoginRequest) {
+          // Clear auth data
+          await authStorage.clearAuth();
+          // Trigger auth error callback to update UI
+          authStorage.triggerAuthError();
+          throw new Error("Session expired. Please login again.");
+        }
+        // For login requests, just pass through the error message
+        const message = error.response.data?.error || "Invalid credentials";
+        throw new Error(message);
       }
 
-      // Server responded with error status
-      const message = error.response.data?.error || error.message;
+      // Handle 5XX server errors
+      if (status >= 500) {
+        const message =
+          error.response.data?.error || "Server error. Please try again later.";
+        throw new Error(message);
+      }
+
+      // Handle other error statuses (4XX)
+      const message =
+        error.response.data?.error || error.message || "An error occurred";
       throw new Error(message);
     } else if (error.request) {
       // Request made but no response received
-      throw new Error("Network error. Please check your connection.");
+      throw new Error(
+        "Unable to connect to server. Please check your internet connection.",
+      );
     } else {
       // Something else happened
-      throw new Error(error.message);
+      throw new Error(error.message || "An unexpected error occurred");
     }
   },
 );

@@ -60,10 +60,30 @@ export default function RegisterScreen({
       // Notify parent that registration was successful
       onRegisterSuccess();
     } catch (error) {
-      Alert.alert(
-        "Registration Failed",
-        error instanceof Error ? error.message : "An error occurred",
-      );
+      const message =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+
+      // Customize error messages for better UX
+      let title = "Registration Failed";
+      let displayMessage = message;
+
+      if (message.includes("Unable to connect")) {
+        title = "Connection Error";
+        displayMessage =
+          "Cannot reach the server. Please check your internet connection and try again.";
+      } else if (message.includes("Server error")) {
+        title = "Server Error";
+        displayMessage =
+          "The server is experiencing issues. Please try again in a few moments.";
+      } else if (
+        message.includes("already exists") ||
+        message.includes("already registered")
+      ) {
+        displayMessage =
+          "An account with this email already exists. Please use a different email or try logging in.";
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setLoading(false);
     }

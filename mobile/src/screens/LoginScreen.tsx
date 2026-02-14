@@ -44,10 +44,31 @@ export default function LoginScreen({
       // Notify parent that login was successful
       onLoginSuccess();
     } catch (error) {
-      Alert.alert(
-        "Login Failed",
-        error instanceof Error ? error.message : "An error occurred",
-      );
+      const message =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+
+      // Customize error messages for better UX
+      let title = "Login Failed";
+      let displayMessage = message;
+
+      if (message.includes("Unable to connect")) {
+        title = "Connection Error";
+        displayMessage =
+          "Cannot reach the server. Please check your internet connection and try again.";
+      } else if (message.includes("Server error")) {
+        title = "Server Error";
+        displayMessage =
+          "The server is experiencing issues. Please try again in a few moments.";
+      } else if (message.includes("migration required")) {
+        title = "Account Update Required";
+        displayMessage =
+          "Your account needs to be updated. Please contact support for assistance.";
+      } else if (message.includes("Invalid email or password")) {
+        displayMessage =
+          "The email or password you entered is incorrect. Please try again.";
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setLoading(false);
     }

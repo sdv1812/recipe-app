@@ -42,6 +42,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Check if password hash exists (for legacy accounts)
+    if (!user.passwordHash) {
+      console.error(`User ${user.email} has no password hash`);
+      return res.status(500).json({
+        success: false,
+        error: "Account migration required. Please contact support.",
+      });
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
