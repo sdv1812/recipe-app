@@ -12,7 +12,7 @@ export type TabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  ForgotPassword: undefined;
+  ForgotPassword: { email?: string };
   ResetPassword: { token: string; email: string };
   ChangePassword: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;

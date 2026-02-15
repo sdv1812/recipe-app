@@ -14,15 +14,19 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../utils/api";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
 import { Ionicons } from "@expo/vector-icons";
+import { RouteProp } from "@react-navigation/native";
+import { RootStackParamList } from "../navigation/types";
 
 type ForgotPasswordScreenProps = {
   navigation: NativeStackNavigationProp<any>;
+  route: RouteProp<RootStackParamList, "ForgotPassword">;
 };
 
 export default function ForgotPasswordScreen({
   navigation,
+  route,
 }: ForgotPasswordScreenProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(route.params?.email || "");
   const [loading, setLoading] = useState(false);
 
   const handleForgotPassword = async () => {
