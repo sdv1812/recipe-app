@@ -134,6 +134,8 @@ export default function App() {
 
   const handleLogout = async () => {
     await authStorage.clearAuth();
+    // Clear all React Query cache to remove previous user's data
+    queryClient.clear();
     setIsAuthenticated(false);
   };
 
