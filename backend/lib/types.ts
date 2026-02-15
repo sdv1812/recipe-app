@@ -7,6 +7,8 @@ export interface UserDocument {
   passwordHash: string;
   name?: string;
   preferences?: string[]; // User food preferences (e.g., "no spicy food", "vegetarian", "gluten-free")
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
