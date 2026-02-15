@@ -43,7 +43,7 @@ export async function sendPasswordResetEmail({
     const { data, error } = await resend.emails.send({
       from: process.env.FROM_EMAIL,
       to,
-      subject: "Reset Your RecipeApp Password",
+      subject: "Reset Your SousAI Password",
       html: emailHtml,
     });
 
@@ -87,7 +87,7 @@ export async function sendPasswordChangedEmail({
     const { data, error } = await resend.emails.send({
       from: process.env.FROM_EMAIL,
       to,
-      subject: "Your RecipeApp Password Was Changed",
+      subject: "Your SousAI Password Was Changed",
       html: emailHtml,
     });
 

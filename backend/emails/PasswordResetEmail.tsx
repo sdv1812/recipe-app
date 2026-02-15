@@ -33,7 +33,7 @@ export default function PasswordResetEmail({
             </Text>
 
             <Text style={text}>
-              We received a request to reset your password for your RecipeApp
+              We received a request to reset your password for your SousAI
               account. Click the button below to create a new password:
             </Text>
 
@@ -61,7 +61,7 @@ export default function PasswordResetEmail({
             <Text style={footer}>
               Best regards,
               <br />
-              The RecipeApp Team
+              The SousAI Team
             </Text>
           </Section>
         </Container>

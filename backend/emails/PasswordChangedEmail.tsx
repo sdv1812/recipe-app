@@ -29,7 +29,7 @@ export default function PasswordChangedEmail({
             </Text>
 
             <Text style={text}>
-              This email confirms that your RecipeApp password was successfully
+              This email confirms that your SousAI password was successfully
               changed.
             </Text>
 
@@ -47,7 +47,7 @@ export default function PasswordChangedEmail({
             <Text style={footer}>
               Best regards,
               <br />
-              The RecipeApp Team
+              The SousAI Team
             </Text>
           </Section>
         </Container>

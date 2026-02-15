@@ -36,6 +36,11 @@ export default function SettingsDrawer({
     navigation.navigate("Preferences");
   };
 
+  const handleChangePassword = () => {
+    onClose();
+    navigation.navigate("ChangePassword");
+  };
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -93,8 +98,8 @@ export default function SettingsDrawer({
           <View style={styles.divider} />
 
           <TouchableOpacity
-            style={[styles.menuItem, styles.disabledMenuItem]}
-            disabled
+            style={styles.menuItem}
+            onPress={handleChangePassword}
           >
             <Ionicons
               name="lock-closed-outline"
@@ -103,10 +108,8 @@ export default function SettingsDrawer({
               style={styles.menuIcon}
             />
             <View style={styles.menuTextContainer}>
-              <Text style={[styles.menuTitle, styles.disabledText]}>
-                Change Password
-              </Text>
-              <Text style={styles.menuSubtitle}>Coming soon</Text>
+              <Text style={styles.menuTitle}>Change Password</Text>
+              <Text style={styles.menuSubtitle}>Update your password</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>

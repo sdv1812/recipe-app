@@ -12,6 +12,9 @@ export type TabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { token: string; email: string };
+  ChangePassword: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
   RecipeDetail: { recipeId: string; fromChat?: boolean };
   ChatModal: {

@@ -235,6 +235,55 @@ export const api = {
   },
 
   /**
+   * Request password reset email
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const { data } = await apiClient.post("/auth/forgot-password", {
+      email,
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to send password reset email");
+    }
+  },
+
+  /**
+   * Reset password using token from email
+   */
+  async resetPassword(
+    email: string,
+    token: string,
+    newPassword: string,
+  ): Promise<void> {
+    const { data } = await apiClient.post("/auth/reset-password", {
+      email,
+      token,
+      newPassword,
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to reset password");
+    }
+  },
+
+  /**
+   * Change password for authenticated user
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const { data } = await apiClient.post("/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to change password");
+    }
+  },
+
+  /**
    * Get user preferences
    */
   async getPreferences(): Promise<string[]> {

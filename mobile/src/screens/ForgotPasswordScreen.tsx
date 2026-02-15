@@ -12,70 +12,52 @@ import {
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../utils/api";
-import { authStorage } from "../utils/storage";
 import { Colors, Typography, Spacing, BorderRadius } from "../constants/design";
+import { Ionicons } from "@expo/vector-icons";
 
-type LoginScreenProps = {
+type ForgotPasswordScreenProps = {
   navigation: NativeStackNavigationProp<any>;
-  onLoginSuccess: () => void;
 };
 
-export default function LoginScreen({
+export default function ForgotPasswordScreen({
   navigation,
-  onLoginSuccess,
-}: LoginScreenProps) {
+}: ForgotPasswordScreenProps) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     try {
-      const { user, token } = await api.login(email.trim(), password);
+      await api.forgotPassword(email.trim());
 
-      // Save auth data
-      await authStorage.saveAuth({ user, token });
-
-      // Notify parent that login was successful
-      onLoginSuccess();
+      Alert.alert(
+        "Email Sent",
+        "If an account exists with this email, you will receive password reset instructions shortly.",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
-
-      // Customize error messages for better UX
-      let title = "Login Failed";
-      let displayMessage = message;
-
-      if (message.includes("Unable to connect")) {
-        title = "Connection Error";
-        displayMessage =
-          "Cannot reach the server. Please check your internet connection and try again.";
-      } else if (message.includes("Server error")) {
-        title = "Server Error";
-        displayMessage =
-          "The server is experiencing issues. Please try again in a few moments.";
-      } else if (message.includes("migration required")) {
-        title = "Account Update Required";
-        displayMessage =
-          "Your account needs to be updated. Please contact support for assistance.";
-      } else if (message.includes("Invalid email or password")) {
-        displayMessage =
-          "The email or password you entered is incorrect. Please try again.";
-      }
-
-      Alert.alert(title, displayMessage);
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const goToRegister = () => {
-    navigation.navigate("Register");
   };
 
   return (
@@ -84,57 +66,60 @@ export default function LoginScreen({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to SousAI</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+
+        <View style={styles.header}>
+          <Ionicons
+            name="lock-closed-outline"
+            size={64}
+            color={Colors.primary}
+            style={styles.icon}
+          />
+          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.subtitle}>
+            Enter your email address and we'll send you instructions to reset
+            your password.
+          </Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
             placeholder="Email"
+            placeholderTextColor={Colors.text.secondary}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
             editable={!loading}
+            autoFocus
           />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!loading}
-          />
-
-          <TouchableOpacity
-            style={styles.forgotPasswordButton}
-            onPress={() => navigation.navigate("ForgotPassword")}
-            disabled={loading}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleForgotPassword}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text style={styles.buttonText}>Send Reset Link</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={goToRegister}
+            onPress={() => navigation.goBack()}
             disabled={loading}
           >
             <Text style={styles.linkText}>
-              Don't have an account?{" "}
-              <Text style={styles.linkTextBold}>Sign Up</Text>
+              Remember your password?{" "}
+              <Text style={styles.linkTextBold}>Sign In</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -150,11 +135,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: "center",
     padding: Spacing.xl,
+    paddingTop: Spacing["3xl"],
+  },
+  backButton: {
+    marginBottom: Spacing.xl,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: Spacing["3xl"],
+  },
+  icon: {
+    marginBottom: Spacing.lg,
   },
   title: {
-    fontSize: Typography.size["4xl"],
+    fontSize: Typography.size["3xl"],
     fontWeight: Typography.weight.bold,
     marginBottom: Spacing.sm,
     textAlign: "center",
@@ -163,8 +158,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: Typography.size.base,
     color: Colors.text.secondary,
-    marginBottom: Spacing["3xl"],
     textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: Spacing.md,
   },
   form: {
     width: "100%",
@@ -203,15 +199,6 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   linkTextBold: {
-    color: Colors.primary,
-    fontWeight: Typography.weight.semibold,
-  },
-  forgotPasswordButton: {
-    alignSelf: "flex-end",
-    marginBottom: Spacing.sm,
-  },
-  forgotPasswordText: {
-    fontSize: Typography.size.sm,
     color: Colors.primary,
     fontWeight: Typography.weight.semibold,
   },

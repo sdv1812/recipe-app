@@ -2,6 +2,7 @@
   "expo": {
     "name": "SousAI",
     "slug": "RecipeApp",
+    "scheme": "recipeapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/SousAi-icon.png",

@@ -76,9 +76,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     );
 
-    // Create reset link
-    // TODO: Update this URL based on your mobile app deep link or web app URL
-    const resetLink = `recipeapp://reset-password?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
+    // Create reset link - using API endpoint that returns HTML
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.BASE_URL || "http://localhost:3000";
+
+    const resetLink = `${baseUrl}/api/reset-password-page?token=${resetToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
     // Send email
     const emailResult = await sendPasswordResetEmail({
