@@ -7,6 +7,7 @@ interface AuthData {
     id: string;
     email: string;
     name: string;
+    isEmailVerified?: boolean;
   };
   token: string;
 }

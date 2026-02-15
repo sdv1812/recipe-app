@@ -9,6 +9,9 @@ export interface UserDocument {
   preferences?: string[]; // User food preferences (e.g., "no spicy food", "vegetarian", "gluten-free")
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  isEmailVerified?: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

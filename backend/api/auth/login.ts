@@ -79,8 +79,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: user._id.toString(),
         email: user.email,
         name: user.name,
+        isEmailVerified: user.isEmailVerified || false,
       },
       token,
+      // Warn if email is not verified
+      warning: !user.isEmailVerified
+        ? "Your email address is not verified. Some features may be limited."
+        : undefined,
     });
   } catch (error) {
     console.error("Error in login handler:", error);

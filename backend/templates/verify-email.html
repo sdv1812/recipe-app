@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification - SousAI</title>
+  <link rel="stylesheet" href="{{STYLES_URL}}">
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p class="loading-text">Verifying your email...</p>
+    </div>
+    
+    <div id="success" class="result-state" style="display: none;">
+      <div class="icon success-icon">✓</div>
+      <h1>Email Verified!</h1>
+      <p>Your email address has been successfully verified. You can now close this page and enjoy all features of SousAI.</p>
+      <button onclick="closeWindow()" class="button">Close</button>
+    </div>
+    
+    <div id="error" class="result-state" style="display: none;">
+      <div class="icon error-icon">⚠️</div>
+      <h1>Verification Failed</h1>
+      <p id="error-message">This verification link is invalid or has expired.</p>
+      <p class="help-text">Please request a new verification email from the app.</p>
+    </div>
+    
+    <div class="footer">
+      <p class="footer-text">SousAI - Your AI Cooking Assistant</p>
+    </div>
+  </div>
+  
+  <script>
+    async function verifyEmail() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const email = urlParams.get('email');
+      
+      if (!token || !email) {
+        showError('Missing verification parameters');
+        return;
+      }
+      
+      try {
+        const baseUrl = window.location.origin;
+        const response = await fetch(baseUrl + '/api/auth/verify-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sousai_secret_2026_mobile_app'
+          },
+          body: JSON.stringify({ email, token })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showSuccess();
+        } else {
+          showError(data.error || 'Verification failed');
+        }
+      } catch (error) {
+        showError('An error occurred. Please check your internet connection.');
+      }
+    }
+    
+    function showSuccess() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      
+      // Auto redirect to app after 3 seconds
+      setTimeout(() => {
+        window.location.href = 'recipeapp://email-verified';
+      }, 3000);
+    }
+    
+    function showError(message) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+    
+    function closeWindow() {
+      window.location.href = 'recipeapp://email-verified';
+    }
+    
+    // Start verification on page load
+    verifyEmail();
+  </script>
+</body>
+</html>

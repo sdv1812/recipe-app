@@ -199,7 +199,12 @@ export const api = {
     email: string,
     password: string,
   ): Promise<{
-    user: { id: string; email: string; name: string };
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      isEmailVerified?: boolean;
+    };
     token: string;
   }> {
     const { data } = await apiClient.post("/auth/login", {
@@ -280,6 +285,19 @@ export const api = {
 
     if (!data.success) {
       throw new Error(data.error || "Failed to change password");
+    }
+  },
+
+  /**
+   * Resend email verification link
+   */
+  async resendVerification(email: string): Promise<void> {
+    const { data } = await apiClient.post("/auth/resend-verification", {
+      email,
+    });
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to send verification email");
     }
   },
 

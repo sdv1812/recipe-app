@@ -1,9 +1,11 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { validateApiKey, unauthorizedResponse } from "../../lib/auth";
 import { getUsersCollection } from "../../lib/db";
 import { generateToken } from "../../lib/jwt";
 import { UserDocument } from "../../lib/types";
+import { sendEmailVerification } from "../../lib/email";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Validate API key
@@ -59,18 +61,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const hashedVerificationToken = crypto
+      .createHash("sha256")
+      .update(verificationToken)
+      .digest("hex");
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     // Create user
     const result = await users.insertOne({
       email: email.toLowerCase(),
       passwordHash: hashedPassword,
       name: name || email.split("@")[0],
+      isEmailVerified: false,
+      emailVerificationToken: hashedVerificationToken,
+      emailVerificationExpires: verificationExpires,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
     const userId = result.insertedId.toString();
 
-    // Generate JWT token
+    // Determine base URL
+    const protocol = req.headers["x-forwarded-proto"] || "http";
+    const host = req.headers["x-forwarded-host"] || req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
+
+    // Create verification URL
+    const verificationUrl = `${baseUrl}/api/verify-email-page?token=${verificationToken}&email=${encodeURIComponent(email.toLowerCase())}`;
+
+    // Send verification email (don't block registration if email fails)
+    sendEmailVerification({
+      to: email.toLowerCase(),
+      verificationUrl,
+    }).catch((error) => {
+      console.error("Failed to send verification email:", error);
+    });
+
+    // Generate JWT token (user can still use app, but with limited access)
     const token = generateToken({
       userId,
       email: email.toLowerCase(),
@@ -82,8 +111,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: userId,
         email: email.toLowerCase(),
         name: name || email.split("@")[0],
+        isEmailVerified: false,
       },
       token,
+      message:
+        "Account created successfully. Please check your email to verify your account.",
     });
   } catch (error) {
     console.error("Error in register handler:", error);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import {
 import Tag from "../components/Tag";
 import Loader from "../components/Loader";
 import Header from "../components/Header";
+import EmailVerificationBanner from "../components/EmailVerificationBanner";
+import { authStorage } from "../utils/storage";
 // Scanning now routes through ChatModal OCR action
 import {
   Colors,
@@ -46,6 +48,20 @@ export default function HomeScreen() {
   const navigation = useNavigation<any>(); // Using any to access tab navigation
   const [viewMode, setViewMode] = useState<ViewMode>("recipes");
   const [searchQuery, setSearchQuery] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(true);
+
+  // Load user email and verification status
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      const auth = await authStorage.getAuth();
+      if (auth?.user) {
+        setUserEmail(auth.user.email);
+        setIsEmailVerified(auth.user.isEmailVerified ?? true);
+      }
+    };
+    loadUserInfo();
+  }, []);
 
   // Use React Query hooks
   const { data: recipes = [], isLoading, isFetching, refetch } = useRecipes();
@@ -461,6 +477,14 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
+      )}
+
+      {/* Email Verification Banner */}
+      {userEmail && !isEmailVerified && (
+        <EmailVerificationBanner
+          email={userEmail}
+          onDismiss={() => setIsEmailVerified(true)}
+        />
       )}
 
       {/* Content */}
