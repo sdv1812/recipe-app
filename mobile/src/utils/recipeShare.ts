@@ -26,7 +26,7 @@ export function recipeToShareableJson(recipe: Recipe): RecipeImport {
  * Generates human-readable shareable text format for a recipe
  */
 export function generateShareableText(recipe: Recipe): string {
-  let text = "🍳 Recipe shared from RecipeApp\n\n";
+  let text = "🍳 Recipe shared from SousAI\n\n";
   text += `${recipe.title}\n\n`;
 
   if (recipe.description) {
@@ -79,7 +79,7 @@ export function generateShareableText(recipe: Recipe): string {
 
   text += "---\n";
   text +=
-    "💡 Want to save this recipe? Copy this entire message, open RecipeApp, start a new chat, and paste it! The AI will help you create and save this recipe.";
+    "💡 Want to save this recipe? Copy this entire message, open SousAI, start a new chat, and paste it! The AI will help you create and save this recipe.";
 
   return text;
 }
